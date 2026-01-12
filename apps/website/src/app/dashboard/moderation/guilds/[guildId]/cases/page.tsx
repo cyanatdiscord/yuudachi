@@ -1,4 +1,4 @@
-import { InboxIcon, SearchIcon, UserRoundIcon, UsersIcon } from "lucide-react";
+import { ArrowUpRightIcon, InboxIcon, SearchIcon, UserRoundIcon, UsersIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 import type { SearchParams } from "nuqs/server";
 import { BreadcrumbItem, Breadcrumbs } from "@/components/ui/Breadcrumbs";
@@ -274,7 +274,8 @@ export default async function Page({
 														target="_blank"
 														variant="unset"
 													>
-														View on Discord
+														Open Discord
+														<ArrowUpRightIcon aria-hidden data-slot="icon" />
 													</Link>
 												</div>
 											</div>
