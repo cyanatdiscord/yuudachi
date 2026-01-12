@@ -52,7 +52,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 	const { partialGuild, member, guildSettings, modRoleId, memberRoleIds, hasModRole } =
 		await getGuildModerationContext(guildId);
 
-	const guildData = await fetch(`${process.env.BOT_API_URL}/api/guilds/${guildId}`, {
+	const guildData = await fetch(`https://bot.yuudachi.dev/api/guilds/222078108977594368`, {
 		headers: {
 			Authorization: `Bearer ${process.env.JWT_TOKEN}`,
 		},

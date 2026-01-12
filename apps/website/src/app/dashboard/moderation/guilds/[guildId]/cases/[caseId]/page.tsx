@@ -57,7 +57,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 		return (
 			<div className="mx-auto w-full max-w-6xl px-6 pb-10">
 				<div className="flex flex-col gap-6 py-6">
-					<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 text-base-neutral-900 dark:border-base-neutral-700 dark:bg-base-neutral-800 dark:text-base-neutral-40">
+					<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 						<div className="flex flex-col gap-1">
 							<p className="text-base-label-lg">Failed to load cases</p>
 							<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
@@ -100,7 +100,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 		return (
 			<div className="mx-auto w-full max-w-6xl px-6 pb-10">
 				<div className="flex flex-col gap-6 py-6">
-					<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 text-base-neutral-900 dark:border-base-neutral-700 dark:bg-base-neutral-800 dark:text-base-neutral-40">
+					<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 						<div className="flex flex-col gap-1">
 							<p className="text-base-label-lg">No user found</p>
 							<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
@@ -198,11 +198,11 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 							<UserDisplay className="w-full max-w-none" user={user} />
 							<div className="mt-3 flex flex-col gap-2 text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
 								<div className="flex flex-wrap gap-x-2 gap-y-1">
-									<span className="font-medium text-base-neutral-900 dark:text-base-neutral-40">Guild</span>
+									<span className="font-medium">Guild</span>
 									<span className="font-mono break-all">{partialGuild.id}</span>
 								</div>
 								<div className="flex flex-wrap gap-x-2 gap-y-1">
-									<span className="font-medium text-base-neutral-900 dark:text-base-neutral-40">User</span>
+									<span className="font-medium">User</span>
 									<span className="font-mono break-all">{user.id}</span>
 								</div>
 							</div>
@@ -213,7 +213,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 						<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 							<div className="flex place-items-center gap-3">
 								<div className="flex flex-col">
-									<p className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">Cases</p>
+									<p className="text-base-label-lg">Cases</p>
 									<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
 										Chronological list (newest first).
 									</p>
@@ -230,7 +230,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 									>
 										<div className="flex flex-col gap-3">
 											<div className="flex flex-wrap place-content-between place-items-end gap-2">
-												<h2 className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">
+												<h2 className="text-base-label-lg">
 													Case <span className="font-mono">#{case_.case_id}</span>
 												</h2>
 												{case_.created_at ? (
@@ -246,7 +246,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 							</div>
 						) : (
 							<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-10 text-center dark:border-base-neutral-700 dark:bg-base-neutral-800">
-								<p className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">No cases</p>
+								<p className="text-base-label-lg">No cases</p>
 								<p className="mt-1 text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
 									No moderation cases were found for this user in this guild.
 								</p>

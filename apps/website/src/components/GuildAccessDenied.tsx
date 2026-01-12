@@ -44,7 +44,7 @@ export function GuildAccessDenied({
 					)}
 				</Breadcrumbs>
 
-				<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 text-base-neutral-900 dark:border-base-neutral-700 dark:bg-base-neutral-800 dark:text-base-neutral-40">
+				<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 					<div className="flex place-items-start gap-3">
 						<LockIcon aria-hidden className="mt-0.5 size-5 text-base-neutral-600 dark:text-base-neutral-300" />
 						<div className="flex flex-col gap-1">

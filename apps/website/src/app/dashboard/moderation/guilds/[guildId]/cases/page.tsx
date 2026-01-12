@@ -224,7 +224,7 @@ export default async function Page({
 
 				<div className="flex flex-col gap-3">
 					<div className="flex flex-col gap-1 sm:flex-row sm:place-content-between sm:place-items-baseline">
-						<h2 className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">Targets</h2>
+						<h2 className="text-base-label-lg">Targets</h2>
 						<p className="text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
 							Showing {numberFormatter.format(shownTargets)} of {numberFormatter.format(totalTargets)}
 						</p>
@@ -247,9 +247,7 @@ export default async function Page({
 											<div className="min-w-0 grow">
 												<div className="flex flex-wrap place-content-between place-items-start gap-2">
 													<div className="min-w-0">
-														<p className="truncate text-base-label-md text-base-neutral-900 dark:text-base-neutral-40">
-															{case_.target_tag}
-														</p>
+														<p className="truncate text-base-label-md">{case_.target_tag}</p>
 														<p className="pt-0.5 text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
 															<span className="font-mono break-all">{case_.target_id}</span>
 														</p>
@@ -286,9 +284,7 @@ export default async function Page({
 						</div>
 					) : (
 						<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 text-center dark:border-base-neutral-700 dark:bg-base-neutral-800">
-							<p className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">
-								{q ? "No matches" : "No cases"}
-							</p>
+							<p className="text-base-label-lg">{q ? "No matches" : "No cases"}</p>
 							<p className="pt-1 text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
 								{q ? "Try a different search query." : "This guild has no recorded cases yet."}
 							</p>

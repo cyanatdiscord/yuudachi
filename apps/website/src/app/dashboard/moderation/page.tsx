@@ -109,7 +109,7 @@ export default async function Page() {
 			<div className="flex flex-col gap-6 pt-6">
 				<div className="flex flex-col gap-3">
 					<div className="flex flex-col gap-1 sm:flex-row sm:place-content-between sm:place-items-baseline">
-						<h2 className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">Connected guilds</h2>
+						<h2 className="text-base-label-lg">Connected guilds</h2>
 						<p className="text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
 							Showing {numberFormatter.format(connectedGuilds)} of {numberFormatter.format(connectedGuilds)}
 						</p>
@@ -144,9 +144,7 @@ export default async function Page() {
 											<div className="min-w-0 grow">
 												<div className="flex flex-wrap place-content-between place-items-start gap-2">
 													<div className="min-w-0">
-														<p className="truncate text-base-label-md text-base-neutral-900 dark:text-base-neutral-40">
-															{guild.name}
-														</p>
+														<p className="truncate text-base-label-md">{guild.name}</p>
 														<p className="pt-0.5 text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
 															<span className="font-mono break-all">{guild.id}</span>
 														</p>
@@ -189,9 +187,7 @@ export default async function Page() {
 								<div className="mx-auto grid size-10 place-content-center rounded-full bg-base-neutral-100 text-base-neutral-600 dark:bg-base-neutral-700 dark:text-base-neutral-200">
 									<LockIcon aria-hidden className="size-5" />
 								</div>
-								<p className="text-base-label-lg text-base-neutral-900 dark:text-base-neutral-40">
-									No connected guilds
-								</p>
+								<p className="text-base-label-lg">No connected guilds</p>
 								<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
 									You can only manage guilds where the bot is installed and you have access.
 								</p>
