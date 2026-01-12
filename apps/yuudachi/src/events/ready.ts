@@ -57,9 +57,15 @@ export default class implements Event {
 					this.webhooks.set(webhook.id, webhook);
 				}
 
-				await guild.bans.fetch();
-				await guild.autoModerationRules.fetch();
-				await guild.scheduledEvents.fetch();
+				try {
+					await guild.bans.fetch();
+				} catch {}
+				try {
+					await guild.autoModerationRules.fetch();
+				} catch {}
+				try {
+					await guild.scheduledEvents.fetch();
+				} catch {}
 			}
 
 			logger.info(
