@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from 
 
 export function GuildsTable({ items }: { readonly items: any[] }) {
 	return (
-		<Table allowResize aria-label="Guilds">
+		<Table aria-label="Guilds">
 			<TableHeader>
 				<TableColumn maxWidth={100}>Icon</TableColumn>
 				<TableColumn isRowHeader>Name</TableColumn>
@@ -14,7 +14,7 @@ export function GuildsTable({ items }: { readonly items: any[] }) {
 					const isIconAnimated = item.icon?.startsWith("a_");
 
 					return (
-						<TableRow href={`/moderation/guilds/${item.id}`} id={item.id}>
+						<TableRow href={`/dashboard/moderation/guilds/${item.id}`} id={item.id}>
 							<TableCell>
 								<picture>
 									<img

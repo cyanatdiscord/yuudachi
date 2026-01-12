@@ -14,29 +14,28 @@ import {
 } from "react";
 import { chain } from "react-aria";
 import {
-	composeRenderProps,
 	Button as RACButton,
 	Disclosure as RACDisclosure,
 	DisclosureGroup as RACDisclosureGroup,
 	DisclosurePanel as RACDisclosurePanel,
-	DisclosureStateContext as RACDisclosureStateContext,
+	Header as RACHeader,
 	Heading as RACHeading,
-	Link,
+	Link as RACLink,
 	Separator as RACSeparator,
 	Text as RACText,
-	Header as RACHeader,
+	composeRenderProps,
 	type ButtonProps as RACButtonProps,
 	type DisclosureGroupProps as RACDisclosureGroupProps,
 	type DisclosurePanelProps as RACDisclosurePanelProps,
 	type DisclosureProps as RACDisclosureProps,
-	type LinkProps,
-	type LinkRenderProps,
+	type LinkProps as RACLinkProps,
+	type LinkRenderProps as RACLinkRenderProps,
 	type SeparatorProps as RACSeparatorProps,
 } from "react-aria-components";
 import { useMediaQuery } from "usehooks-ts";
 import { Button, type ButtonProps } from "@/components/ui/Button";
 import { SheetBody, SheetContent, type SheetContentProps } from "@/components/ui/Sheet";
-import { Tooltip, TooltipContent } from "@/components/ui/Tooltip";
+import { Tooltip, TooltipContent, type TooltipContentProps } from "@/components/ui/Tooltip";
 import { cva, cx } from "@/styles/cva";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -70,7 +69,7 @@ export type SidebarProviderProps = ComponentProps<"div"> & {
 };
 
 export function SidebarProvider({
-	defaultOpen = false,
+	defaultOpen = true,
 	isOpen: openProp,
 	onOpenChange: setOpenProp,
 	shortcut = "b",
@@ -94,7 +93,7 @@ export function SidebarProvider({
 				setInternalOpenState(openState);
 			}
 
-			// oxlint-disable-next-line no-document-cookie, react-compiler/react-compiler
+			// eslint-disable-next-line no-document-cookie, react-compiler/react-compiler
 			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
 		},
 		[setOpenProp, open, isMobile, setOpenMobile],
@@ -103,8 +102,19 @@ export function SidebarProvider({
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === shortcut && (event.metaKey || event.ctrlKey)) {
-				event.preventDefault();
-				setOpen((open) => !open);
+				const activeElement = document.activeElement;
+
+				// Check if user is in a text input context
+				const isInTextInput =
+					activeElement instanceof HTMLInputElement ||
+					activeElement instanceof HTMLTextAreaElement ||
+					activeElement?.getAttribute("contenteditable") === "true" ||
+					activeElement?.getAttribute("role") === "textbox";
+
+				if (!isInTextInput) {
+					event.preventDefault();
+					setOpen((open) => !open);
+				}
 			}
 		};
 
@@ -125,6 +135,10 @@ export function SidebarProvider({
 		}),
 		[state, open, setOpen, openMobile, setOpenMobile, isMobile],
 	);
+
+	if (isMobile === undefined) {
+		return null;
+	}
 
 	return (
 		<SidebarContext value={contextValue}>
@@ -156,7 +170,6 @@ const sidebarGapStyles = cva({
 	variants: {
 		intent: {
 			default: "group-data-[collapsible=dock]:w-(--sidebar-width-dock)",
-			fleet: "group-data-[collapsible=dock]:w-(--sidebar-width-dock)",
 			float: "group-data-[collapsible=dock]:w-[calc(var(--sidebar-width-dock)+theme(spacing.4))]",
 			inset: "group-data-[collapsible=dock]:w-[calc(var(--sidebar-width-dock)+theme(spacing.2))]",
 		},
@@ -181,11 +194,6 @@ const sidebarStyles = cva({
 				"group-data-[collapsible=dock]:w-(--sidebar-width-dock) group-data-[side=left]:border-(--sidebar-border) group-data-[side=right]:border-(--sidebar-border)",
 				"group-data-[side=left]:border-r group-data-[side=right]:border-l",
 			],
-			fleet: [
-				"group-data-[collapsible=dock]:w-(--sidebar-width-dock)",
-				"**:data-sidebar-disclosure:gap-y-0 **:data-sidebar-disclosure:px-0 **:data-sidebar-section:gap-y-0 **:data-sidebar-section:px-0",
-				"group-data-[side=left]:border-r group-data-[side=right]:border-l",
-			],
 			float: "bg-bg p-2 group-data-[collapsible=dock]:w-[calc(var(--sidebar-width-dock)+theme(spacing.4)+2px)]",
 			inset: ["p-2 group-data-[collapsible=dock]:w-[calc(var(--sidebar-width-dock)+theme(spacing.2)+2px)]"],
 		},
@@ -196,7 +204,7 @@ export type SidebarProps = ComponentProps<"div"> &
 	SheetContentProps & {
 		readonly closeButton?: boolean;
 		readonly collapsible?: "dock" | "hidden" | "none";
-		readonly intent?: "default" | "fleet" | "float" | "inset";
+		readonly intent?: "default" | "float" | "inset";
 		readonly side?: "left" | "right";
 	};
 
@@ -365,8 +373,6 @@ export function SidebarHeader({ hasBorder = false, ...props }: SidebarHeaderProp
 const sidebarFooterStyles = cva({
 	base: [
 		"flex flex-col p-6",
-		"in-data-[intent=fleet]:mt-0 in-data-[intent=fleet]:p-0",
-		"in-data-[intent=fleet]:**:data-[slot=menu-trigger]:rounded-none",
 		"**:data-[slot=menu-trigger]:relative **:data-[slot=menu-trigger]:overflow-hidden",
 		"**:data-[slot=menu-trigger]:rounded-lg",
 		"**:data-[slot=menu-trigger]:flex **:data-[slot=menu-trigger]:cursor-default **:data-[slot=menu-trigger]:items-center **:data-[slot=menu-trigger]:p-2 **:data-[slot=menu-trigger]:outline-hidden sm:**:data-[slot=menu-trigger]:text-base-md",
@@ -452,7 +458,7 @@ export function SidebarSection({ className, ...props }: SidebarSectionProps) {
 		<div
 			{...props}
 			className={cx(
-				"col-span-full flex min-w-0 flex-col gap-0.5 **:data-sidebar-section:**:gap-0 **:data-sidebar-section:pr-0",
+				"col-span-full flex min-w-0 flex-col gap-0.5 **:data-[slot=sidebar-section]:**:gap-0 **:data-[slot=sidebar-section]:pr-0",
 				state === "expanded" && "",
 				className,
 			)}
@@ -472,16 +478,15 @@ export function SidebarSection({ className, ...props }: SidebarSectionProps) {
 
 const sidebarItemStyles = cva({
 	base: [
-		"group/sidebar-item relative col-span-full w-full min-w-0 cursor-pointer overflow-hidden rounded-lg px-[calc(var(--spacing)*2.3)] py-[calc(var(--spacing)*1.3)] text-left focus-visible:outline-hidden",
+		"group/sidebar-item relative col-span-full w-full min-w-0 cursor-pointer gap-2 overflow-hidden rounded-lg px-[calc(var(--spacing)*2.3)] py-[calc(var(--spacing)*1.3)] text-left focus-visible:outline-hidden",
 		"**:data-[slot=menu-trigger]:absolute **:data-[slot=menu-trigger]:right-0 **:data-[slot=menu-trigger]:-mr-1 **:data-[slot=menu-trigger]:flex **:data-[slot=menu-trigger]:h-full **:data-[slot=menu-trigger]:w-[calc(var(--sidebar-width)-90%)] **:data-[slot=menu-trigger]:items-center **:data-[slot=menu-trigger]:justify-end **:data-[slot=menu-trigger]:pr-2.5 **:data-[slot=menu-trigger]:opacity-0 hover:**:data-[slot=menu-trigger]:opacity-100 **:data-[slot=menu-trigger]:focus-visible:opacity-100 **:data-[slot=menu-trigger]:has-data-focus:opacity-100 **:data-[slot=menu-trigger]:pressed:opacity-100 pressed:**:data-[slot=menu-trigger]:opacity-100",
 		"**:data-[slot=avatar]:size-4 **:data-[slot=avatar]:shrink-0 **:data-[slot=avatar]:*:size-4 **:data-[slot=icon]:size-4 **:data-[slot=icon]:shrink-0",
-		"in-data-[intent=fleet]:rounded-none",
 	],
 	variants: {
 		collapsed: {
 			true: "flex size-9 place-content-center place-items-center gap-x-0 p-0 not-has-data-[slot=icon]:hidden **:data-[slot=menu-trigger]:hidden",
 			false:
-				"grid grid-cols-[auto_1fr_1.5rem_0.5rem_auto] items-center **:data-[slot=avatar]:mr-2 **:data-[slot=avatar]:*:mr-2 **:data-[slot=icon]:mr-2 supports-[grid-template-columns:subgrid]:grid-cols-subgrid",
+				"grid grid-cols-[auto_1fr_1.5rem_0.5rem_auto] items-center supports-[grid-template-columns:subgrid]:grid-cols-subgrid",
 		},
 		isCurrent: {
 			true: "text-fg hover:text-fg **:data-[slot=icon]:text-fg [&_.text-muted-fg]:text-fg/80 bg-(--sidebar-accent) hover:bg-(--sidebar-accent)/90 **:data-[slot=menu-trigger]:from-(--sidebar-accent)",
@@ -498,28 +503,30 @@ const sidebarItemStyles = cva({
 	},
 });
 
-type SidebarItemProps = Omit<ComponentProps<typeof Link>, "children"> & {
+type SidebarItemProps = Omit<ComponentProps<typeof RACLink>, "children"> & {
 	readonly badge?: number | string | undefined;
 	readonly children?:
 		| ReactNode
-		| ((values: LinkRenderProps & { defaultChildren: ReactNode; isCollapsed: boolean }) => ReactNode);
+		| ((values: RACLinkRenderProps & { defaultChildren: ReactNode; isCollapsed: boolean }) => ReactNode);
 	readonly isCurrent?: boolean;
-	readonly tooltip?: ReactNode;
+	readonly tooltip?: TooltipContentProps | string;
 };
 
 export function SidebarItem({ tooltip, ...props }: SidebarItemProps) {
 	const { state, isMobile } = useSidebar();
 	const isCollapsed = state === "collapsed" && !isMobile;
+	const tooltipProps = typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
 	const link = (
-		<Link
+		<RACLink
 			{...props}
 			aria-current={props.isCurrent ? "page" : undefined}
-			className={composeRenderProps(props.className, (className, { isPressed, isFocusVisible, isHovered }) =>
+			className={composeRenderProps(props.className, (className, renderProps) =>
 				sidebarItemStyles({
+					...renderProps,
 					isCurrent: props.isCurrent,
 					collapsed: isCollapsed,
-					isActive: isPressed || isFocusVisible || isHovered,
+					isActive: renderProps.isPressed || renderProps.isFocusVisible || renderProps.isHovered,
 					className,
 				}),
 			)}
@@ -528,22 +535,24 @@ export function SidebarItem({ tooltip, ...props }: SidebarItemProps) {
 			{(values) => (
 				<>{typeof props.children === "function" ? props.children({ ...values, isCollapsed }) : props.children}</>
 			)}
-		</Link>
+		</RACLink>
 	);
 
-	return isCollapsed && tooltip ? (
+	if (!isCollapsed || !tooltipProps) {
+		return link;
+	}
+
+	return (
 		<Tooltip delay={0}>
 			{link}
 			<TooltipContent
-				className="**:data-[slot=icon]:hidden **:data-[slot=sidebar-label-mask]:hidden"
-				placement="right"
-				variant="plain"
+				{...tooltipProps}
+				className={cx("**:data-[slot=icon]:hidden **:data-[slot=sidebar-label-mask]:hidden", tooltipProps.className)}
+				placement={tooltipProps.placement ?? "right"}
 			>
-				{tooltip}
+				{tooltipProps.children}
 			</TooltipContent>
 		</Tooltip>
-	) : (
-		link
 	);
 }
 
@@ -557,12 +566,12 @@ const sidebarLinkStyles = cva({
 	},
 });
 
-export function SidebarLink({ className, ...props }: LinkProps) {
+export function SidebarLink({ className, ...props }: RACLinkProps) {
 	const { state, isMobile } = useSidebar();
 	const collapsed = state === "collapsed" && !isMobile;
 
 	return (
-		<Link
+		<RACLink
 			{...props}
 			className={composeRenderProps(className, (className, renderProps) =>
 				sidebarLinkStyles({
@@ -583,6 +592,10 @@ export function SidebarInset(props: ComponentProps<"main">) {
 				"relative flex min-h-dvh w-full flex-1 flex-col peer-data-[intent=inset]:border peer-data-[intent=inset]:border-transparent lg:min-w-0",
 				"bg-base-neutral-0 peer-data-[intent=inset]:overflow-hidden dark:bg-base-neutral-900 dark:peer-data-[intent=inset]:bg-base-neutral-900",
 				"peer-data-[intent=inset]:min-h-[calc(100dvh-(--spacing(4)))] md:peer-data-[intent=inset]:m-2 md:peer-data-[intent=inset]:rounded-xl md:peer-data-[intent=inset]:shadow-base-md md:peer-data-[intent=inset]:peer-data-[side=left]:ml-0 md:peer-data-[intent=inset]:peer-data-[side=right]:mr-0 md:peer-data-[state=collapsed]:peer-data-[intent=inset]:peer-data-[side=left]:ml-2 md:peer-data-[state=collapsed]:peer-data-[intent=inset]:peer-data-[side=right]:mr-2",
+				"group-has-data-[intent=inset]/sidebar-root:bg-overlay group-has-data-[intent=inset]/sidebar-root:border group-has-data-[intent=inset]/sidebar-root:border-(--sidebar-border)",
+				"md:group-has-data-[intent=inset]/sidebar-root:m-2 md:group-has-data-[intent=inset]/sidebar-root:rounded-2xl",
+				"md:group-has-data-[side=left]:group-has-data-[intent=inset]/sidebar-root:ml-0 md:group-has-data-[side=right]:group-has-data-[intent=inset]/sidebar-root:mr-0",
+				"md:group-has-data-[intent=inset]/sidebar-root:peer-data-[state=collapsed]:ml-2",
 				props.className,
 			)}
 			data-slot="sidebar-inset"
@@ -616,23 +629,21 @@ export function SidebarDisclosure(props: RACDisclosureProps) {
 	);
 }
 
-export type SidebarDisclosureTriggerProps = RACButtonProps;
-
-export function SidebarDisclosureTrigger({ className, ...props }: SidebarDisclosureTriggerProps) {
+export function SidebarDisclosureTrigger(props: RACButtonProps) {
 	const { state } = useSidebar();
-	const disclosureState = use(RACDisclosureStateContext)!;
 
 	return (
 		<RACHeading level={3}>
 			<RACButton
 				{...props}
-				className={composeRenderProps(className, (className, { isPressed, isHovered, isDisabled }) =>
+				className={composeRenderProps(props.className, (className, renderProps) =>
 					cx(
-						"group/sidebar-disclosure-trigger relative col-span-full flex w-full min-w-0 place-items-center gap-2 overflow-hidden rounded-lg p-2 text-left",
+						"flex w-full min-w-0 items-center gap-2 rounded-lg p-2 text-left",
+						"group/sidebar-disclosure-trigger relative col-span-full overflow-hidden focus-visible:outline-hidden",
 						"**:data-[slot=icon]:size-5 **:data-[slot=icon]:shrink-0",
 						"**:last:data-[slot=icon]:ml-auto **:last:data-[slot=icon]:size-5",
-						(isPressed || isHovered) && "",
-						isDisabled && "opacity-38",
+						(renderProps.isPressed || renderProps.isHovered) && "",
+						renderProps.isDisabled && "opacity-38",
 						className,
 					),
 				)}
@@ -643,11 +654,7 @@ export function SidebarDisclosureTrigger({ className, ...props }: SidebarDisclos
 						{typeof props.children === "function" ? props.children(values) : props.children}
 						{state !== "collapsed" && (
 							<ChevronDownIcon
-								aria-hidden
-								className={cx(
-									"z-10 ml-auto size-3.5 transition-transform duration-200",
-									disclosureState.isExpanded && "rotate-180",
-								)}
+								className="z-10 ml-auto size-3.5 transition-transform duration-200 group-aria-expanded/sidebar-disclosure-trigger:rotate-180"
 								data-slot="chevron"
 							/>
 						)}
@@ -794,7 +801,7 @@ export function SidebarNav({ isSticky = false, ...props }: SidebarNavProps) {
 		<nav
 			{...props}
 			className={cx(
-				"isolate flex place-content-between place-items-center gap-x-2 p-4 sm:justify-start md:w-full",
+				"isolate flex place-content-between place-items-center gap-x-2 p-4 sm:place-content-start md:w-full",
 				isSticky && "static top-0 z-40 group-has-data-[intent=default]/sidebar-root:sticky",
 				props.className,
 			)}
@@ -811,14 +818,12 @@ export function SidebarMenuTrigger({ alwaysVisible = false, ...props }: SidebarM
 	return (
 		<RACButton
 			{...props}
-			className={composeRenderProps(props.className, (className) =>
-				cx(
-					!alwaysVisible &&
-						"group/sidebar-item:pressed:opacity-100 opacity-0 group-hover/sidebar-item:opacity-100 group-focus-visible/sidebar-item:opacity-100 pressed:opacity-100",
-					"absolute right-0 flex h-full w-[calc(var(--sidebar-width)-90%)] place-content-end place-items-center pr-2.5 outline-hidden",
-					"**:data-[slot=icon]:shrink-0 [&_[data-slot='icon']:not([class*='size-'])]:size-5",
-					className,
-				),
+			className={cx(
+				!alwaysVisible &&
+					"group/sidebar-item:pressed:opacity-100 opacity-0 group-hover/sidebar-item:opacity-100 group-focus-visible/sidebar-item:opacity-100 pressed:opacity-100",
+				"absolute right-0 flex h-full w-[calc(var(--sidebar-width)-90%)] place-content-end place-items-center pr-2.5 outline-hidden",
+				"**:data-[slot=icon]:shrink-0 [&_[data-slot=icon]:not([class*='size-'])]:size-5",
+				props.className,
 			)}
 			data-slot="menu-trigger"
 		/>

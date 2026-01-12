@@ -24,7 +24,7 @@
 		"id-length": [
 			2,
 			{
-				"exceptions": ["_", "$", "a", "b", "p", "v", "x", "y"],
+				"exceptions": ["_", "$", "a", "b", "p", "q", "v", "x", "y"],
 				"min": 2
 			}
 		],

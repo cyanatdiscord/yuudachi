@@ -99,7 +99,7 @@ export function SelectTrigger(props: SelectTriggerProps) {
 			>
 				{(values) => (
 					<>
-						{props.prefix && <span className="mr-2 *:data-[slot=icon]:size-5.5">{props.prefix}</span>}
+						{props.prefix && <span className="mr-2 **:data-[slot=icon]:size-5.5">{props.prefix}</span>}
 						{typeof props.children === "function" ? props.children(values) : props.children}
 
 						{!props.children && (

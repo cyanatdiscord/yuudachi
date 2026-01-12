@@ -82,7 +82,7 @@ function ColumnResizer(props: RACColumnResizerProps) {
 				"&[data-resizable-direction=left]:cursor-e-resize &[data-resizable-direction=right]:cursor-w-resize [&[data-resizing]>div]:bg-primary resizable-both:cursor-ew-resize absolute top-0 right-0 bottom-0 grid w-px touch-none place-content-center px-1",
 			)}
 		>
-			<div className="h-full w-px border-base-neutral-100 py-3 dark:border-base-neutral-700" />
+			<div className="bg-border h-full w-px py-3" />
 		</RACColumnResizer>
 	);
 }
@@ -178,7 +178,7 @@ export function TableHeader<Type extends object>(props: TableHeaderProps<Type>) 
 			{...props}
 			className={composeTailwindRenderProps(
 				props.className,
-				"border-base-neutral-100 dark:border-base-neutral-700 border-b",
+				"border-b border-base-neutral-100 dark:border-base-neutral-700",
 			)}
 			data-slot="table-header"
 		>

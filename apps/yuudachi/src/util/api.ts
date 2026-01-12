@@ -34,6 +34,15 @@ export const api = fastify({ trustProxy: true })
 				`;
 			});
 
+			app.get("/guilds/:id", async (request) => {
+				const { id } = request.params as any;
+				const client = container.get(Client);
+
+				const guild = await client.guilds.fetch(id);
+
+				return guild;
+			});
+
 			app.get("/guilds/:id/settings", async (request) => {
 				const { id } = request.params as any;
 				const sql = container.get<Sql<any>>(kSQL);
@@ -80,13 +89,14 @@ export const api = fastify({ trustProxy: true })
 				return { banned };
 			});
 
-			app.get("/cases", async (_) => {
+			app.get("/guilds/:id/cases", async (request) => {
+				const { id } = request.params as any;
 				const sql = container.get<Sql<any>>(kSQL);
 
 				const cases = await sql<RawCase[]>`
 					select target_id, target_tag, count(*) cases_count
 					from cases
-					where guild_id = '222078108977594368'
+					where guild_id = ${id}
 						and action not in (1, 8)
 					group by target_id, target_tag
 					order by max(created_at) desc
@@ -96,24 +106,24 @@ export const api = fastify({ trustProxy: true })
 				const [{ count }] = await sql<[{ count: number }]>`
 					select count(*)
 					from cases
-					where guild_id = '222078108977594368'
+					where guild_id = ${id}
 						and action not in (1, 8)
 				`;
 
 				return { cases, count };
 			});
 
-			app.get("/cases/:id", async (request) => {
-				const { id } = request.params as any;
+			app.get("/guilds/:id/cases/:targetId", async (request) => {
+				const { id, targetId } = request.params as any;
 				const client = container.get(Client);
 				const sql = container.get<Sql<any>>(kSQL);
 
-				const user = await client.users.fetch(id, { force: true });
+				const user = await client.users.fetch(targetId, { force: true });
 				const cases = await sql<RawCase[]>`
 					select *
 					from cases
-					where guild_id = '222078108977594368'
-						and target_id = ${id}
+					where guild_id = ${id}
+						and target_id = ${targetId}
 						and action not in (1, 8)
 					order by created_at desc
 				`;
@@ -121,8 +131,8 @@ export const api = fastify({ trustProxy: true })
 				const [{ count }] = await sql<[{ count: number }]>`
 					select count(*)
 					from cases
-					where guild_id = '222078108977594368'
-						and target_id = ${id}
+					where guild_id = ${id}
+						and target_id = ${targetId}
 						and action not in (1, 8)
 				`;
 

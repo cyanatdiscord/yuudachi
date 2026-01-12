@@ -1,3 +1,5 @@
+import { cx } from "@/styles/cva";
+
 export function UserDisplay({
 	user,
 	className,
@@ -15,7 +17,7 @@ export function UserDisplay({
 	const isBannerAnimated = user.banner?.startsWith("a_");
 
 	return (
-		<div className={`flex w-[340px] max-w-[340px] flex-col ${className ?? ""}`}>
+		<div className={cx("flex w-[340px] max-w-[340px] flex-col", className)}>
 			<div className="relative">
 				<div className="h-[120px] max-h-[120px]">
 					{user.banner ? (

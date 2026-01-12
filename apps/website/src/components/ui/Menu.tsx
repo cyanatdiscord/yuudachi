@@ -65,7 +65,10 @@ type MenuContentProps<Type> = Pick<PopoverContentProps, "placement"> &
 
 export function MenuContent<Type extends object>({ popover, ...props }: MenuContentProps<Type>) {
 	return (
-		<PopoverContent {...popover} className={cx("min-w-(--trigger-width) overflow-hidden", popover?.className)}>
+		<PopoverContent
+			{...popover}
+			className={cx("min-w-(--trigger-width) *:data-[slot=popover-inner]:overflow-hidden", popover?.className)}
+		>
 			<RACMenu
 				{...props}
 				className={cx(
@@ -143,7 +146,7 @@ export function MenuItem({ isDestructive = false, ...props }: MenuItemProps) {
 					)}
 
 					{values.hasSubmenu && (
-						<ChevronRightIcon aria-hidden className="absolute right-2 size-3.5" data-slot="chevron" />
+						<ChevronRightIcon aria-hidden className="absolute right-2 size-4" data-slot="chevron" />
 					)}
 				</>
 			)}

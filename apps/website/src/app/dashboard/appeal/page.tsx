@@ -7,18 +7,9 @@ export default async function Page() {
 	const cookieStore = await cookies();
 
 	const token = cookieStore.get("discord_token");
+
 	if (!token) {
-		return (
-			<a
-				href={`https://discord.com/api/oauth2/authorize?client_id=${
-					process.env.DISCORD_CLIENT_ID
-				}&redirect_uri=${encodeURIComponent(
-					process.env.DISCORD_REDIRECT_URI!,
-				)}&response_type=code&scope=identify%20guilds.members.read%20guilds.join%20guilds`}
-			>
-				Login with Discord
-			</a>
-		);
+		redirect("/login");
 	}
 
 	const userData = await fetch("https://discord.com/api/v10/users/@me", {

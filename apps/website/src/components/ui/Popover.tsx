@@ -31,11 +31,16 @@ export function PopoverBody(props: DialogBodyProps) {
 }
 
 export function PopoverFooter(props: DialogFooterProps) {
-	return <DialogFooter {...props} className={cx("sm:p-4", props.className)} />;
+	return (
+		<DialogFooter
+			{...props}
+			className={cx("place-content-start has-[button]:place-content-end sm:p-4", props.className)}
+		/>
+	);
 }
 
 const contentStyles = cva({
-	base: "group/popover max-w-xs min-w-(--trigger-width) origin-(--trigger-anchor-point) overflow-y-auto rounded-sm border border-base-neutral-200 bg-base-neutral-0 text-base-md shadow-base-sm transition-transform [scrollbar-width:thin] dark:border-base-neutral-600 dark:bg-base-neutral-800 forced-colors:bg-[Canvas]",
+	base: "group/popover max-w-xs min-w-(--trigger-width) origin-(--trigger-anchor-point) rounded-sm border border-base-neutral-200 bg-base-neutral-0 text-base-md shadow-base-sm transition-transform [scrollbar-width:thin] dark:border-base-neutral-600 dark:bg-base-neutral-800 forced-colors:bg-[Canvas]",
 	variants: {
 		isEntering: {
 			true: "animate-in duration-150 ease-out fade-in placement-left:slide-in-from-right-1 placement-right:slide-in-from-left-1 placement-top:slide-in-from-bottom-1 placement-bottom:slide-in-from-top-1",
@@ -78,7 +83,9 @@ export function PopoverContent({ showArrow = true, ...props }: PopoverContentPro
 							</svg>
 						</RACOverlayArrow>
 					)}
-					{typeof props.children === "function" ? props.children(values) : props.children}
+					<div className="max-h-[inherit] overflow-y-auto" data-slot="popover-inner">
+						{typeof props.children === "function" ? props.children(values) : props.children}
+					</div>
 				</>
 			)}
 		</RACPopover>

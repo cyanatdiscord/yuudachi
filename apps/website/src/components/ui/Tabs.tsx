@@ -112,7 +112,7 @@ export function Tab({ hasIndicator = true, ...props }: TabProps) {
 						<RACSelectionIndicator
 							className={cx(
 								"absolute rounded bg-base-neutral-800 transition-[translate,width,height] duration-200 dark:bg-base-neutral-60",
-								"group-orientation-horizontal/tabs:inset-x-0 group-orientation-horizontal/tabs:-bottom-[15px] group-orientation-horizontal/tabs:h-0.5",
+								"group-orientation-horizontal/tabs:inset-x-0 group-orientation-horizontal/tabs:-bottom-[16px] group-orientation-horizontal/tabs:h-0.5",
 							)}
 							data-slot="selected-indicator"
 						/>

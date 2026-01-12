@@ -19,7 +19,7 @@ export function GuildsGrid({ items }: { readonly items: any[] }) {
 							"data-[selected='true']:bg-base-tangerine-100/38 data-[selected='true']:hover:bg-base-tangerine-100/72 data-[selected='true']:focus-visible:bg-base-tangerine-100/72 dark:data-[selected='true']:bg-base-tangerine-900/38 dark:data-[selected='true']:hover:bg-base-tangerine-900/72 dark:data-[selected='true']:focus-visible:bg-base-tangerine-900/72 data-[selected='true']:pressed:bg-base-tangerine-100 dark:data-[selected='true']:pressed:bg-base-tangerine-900",
 							"selected:bg-base-tangerine-100/38 selected:hover:bg-base-tangerine-100/72 selected:focus-visible:bg-base-tangerine-100/72 dark:selected:bg-base-tangerine-900/38 dark:selected:hover:bg-base-tangerine-900/72 dark:selected:focus-visible:bg-base-tangerine-900/72 selected:pressed:bg-base-tangerine-100 dark:selected:pressed:bg-base-tangerine-900",
 						)}
-						href={`/moderation/guilds/${item.id}`}
+						href={`/dashboard/moderation/guilds/${item.id}`}
 						id={item.id}
 						textValue={item.name}
 					>
