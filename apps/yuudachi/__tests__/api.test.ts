@@ -43,11 +43,16 @@ const caseRecord = {
 
 const casesList = [{ target_id: "target", target_tag: "target#0001", cases_count: 2 }];
 const appealsList = [
-	{ appeal_id: "1", guild_id: "222078108977594368", created_at: "2024-01-01T00:00:00.000Z", reason: "appeal" },
+	{
+		appeal_id: "1",
+		guild_id: "222078108977594368",
+		created_at: "2024-01-01T00:00:00.000Z",
+		reason: "appeal",
+	},
 ];
 
 const sqlMock = createSqlMock<any>(async (strings?: TemplateStringsArray) => {
-	const query = strings?.[0] ?? "";
+	const query = strings?.join("") ?? "";
 
 	if (query.includes("from cases") && query.includes("limit 1")) {
 		return [caseRecord];
@@ -111,14 +116,22 @@ describe("api", () => {
 	});
 
 	it("responds to root route", async () => {
-		const res = await api.inject({ method: "GET", url: "/api/", headers: authHeader });
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/",
+			headers: authHeader,
+		});
 
 		expect(res.statusCode).toBe(200);
 		expect(res.body).toBe("Welcome to the yuudachi api.");
 	});
 
 	it("returns banned user details", async () => {
-		const res = await api.inject({ method: "GET", url: "/api/users/user-id", headers: authHeader });
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/users/user-id",
+			headers: authHeader,
+		});
 		const body = res.json();
 
 		expect(body.banned).toBe(true);
@@ -129,13 +142,21 @@ describe("api", () => {
 	it("returns non-banned state when ban lookup fails", async () => {
 		bansFetch.mockRejectedValue(new Error("not banned"));
 
-		const res = await api.inject({ method: "GET", url: "/api/users/user-id", headers: authHeader });
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/users/user-id",
+			headers: authHeader,
+		});
 
 		expect(res.json()).toEqual({ banned: false });
 	});
 
 	it("lists cases with counts", async () => {
-		const res = await api.inject({ method: "GET", url: "/api/cases", headers: authHeader });
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/guilds/222078108977594368/cases",
+			headers: authHeader,
+		});
 		const body = res.json();
 
 		expect(body.cases).toEqual(casesList);
@@ -143,7 +164,12 @@ describe("api", () => {
 	});
 
 	it("returns cases for a single user", async () => {
-		const res = await api.inject({ method: "GET", url: "/api/cases/user-id", headers: authHeader });
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/guilds/222078108977594368/cases/user-id",
+			headers: authHeader,
+		});
+
 		const body = res.json();
 
 		expect(body.user.id).toBe("user-id");
@@ -152,7 +178,11 @@ describe("api", () => {
 	});
 
 	it("returns appeals overview", async () => {
-		const res = await api.inject({ method: "GET", url: "/api/appeals", headers: authHeader });
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/appeals",
+			headers: authHeader,
+		});
 		const body = res.json();
 
 		expect(body.appeals).toEqual(appealsList);
