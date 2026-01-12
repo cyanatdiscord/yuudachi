@@ -26,7 +26,10 @@ type CasesAggregate = {
 type CasesResponse = {
 	readonly cases: readonly CasesAggregate[];
 	readonly count: number;
+	readonly targets: number;
 };
+
+const CASES_PAGE_SIZE = 50;
 
 function parseCount(value: string) {
 	const parsed = Number.parseInt(value, 10);
@@ -44,6 +47,7 @@ export default async function Page({
 	const parsedSearchParams = await casesSearchParamsCache.parse(searchParams ?? Promise.resolve({}));
 	const q = parsedSearchParams.q.trim();
 	const sort = parsedSearchParams.sort;
+	const page = parsedSearchParams.page > 0 ? parsedSearchParams.page : 1;
 
 	const numberFormatter = new Intl.NumberFormat("en-US");
 
@@ -52,13 +56,15 @@ export default async function Page({
 	const guildIcon = getDiscordGuildIconUrl(partialGuild, 240);
 	const guildAcronym = getGuildAcronym(partialGuild.name);
 
-	const buildHref = (next: Partial<{ q: string; sort: "recent" | "count" }>) => {
+	const buildHref = (next: Partial<{ q: string; sort: "recent" | "count"; page: number }>) => {
 		const nextQ = typeof next.q === "string" ? next.q.trim() : q;
 		const nextSort = next.sort ?? sort;
+		const nextPage = typeof next.page === "number" ? next.page : page;
 
 		return serializeCasesSearchParams(`/dashboard/moderation/guilds/${guildId}/cases`, {
 			q: nextQ,
 			sort: nextSort,
+			page: nextPage,
 		});
 	};
 
@@ -75,7 +81,10 @@ export default async function Page({
 		);
 	}
 
-	const casesData = await fetch(`${process.env.BOT_API_URL}/api/guilds/${guildId}/cases`, {
+	const casesUrl = new URL(`${process.env.BOT_API_URL}/api/guilds/${guildId}/cases`);
+	casesUrl.searchParams.set("page", String(page));
+
+	const casesData = await fetch(casesUrl, {
 		headers: {
 			Authorization: `Bearer ${process.env.JWT_TOKEN}`,
 		},
@@ -85,7 +94,7 @@ export default async function Page({
 		return notFound();
 	}
 
-	const { cases, count } = (await casesData.json()) as CasesResponse;
+	const { cases, count, targets } = (await casesData.json()) as CasesResponse;
 
 	const needle = q.toLowerCase();
 	const filtered = needle
@@ -99,9 +108,13 @@ export default async function Page({
 		return 0;
 	});
 
-	const totalTargets = cases.length;
+	const totalTargets = targets ?? cases.length;
 	const shownTargets = sorted.length;
 	const totalCases = count;
+	const totalPages = totalTargets ? Math.ceil(totalTargets / CASES_PAGE_SIZE) : 1;
+	const hasPagination = totalPages > 1;
+	const hasPrevPage = page > 1;
+	const hasNextPage = page < totalPages;
 
 	return (
 		<div className="mx-auto w-full max-w-6xl px-6 pb-10">
@@ -139,7 +152,7 @@ export default async function Page({
 									Guild: <span className="font-mono break-all">{guildId}</span>
 								</span>
 								<span className="rounded-full border border-base-neutral-200 px-2.5 py-1 dark:border-base-neutral-700">
-									Scope: latest 50 targets
+									Scope: {numberFormatter.format(CASES_PAGE_SIZE)} targets per page
 								</span>
 							</div>
 						</div>
@@ -206,15 +219,19 @@ export default async function Page({
 
 					<div className="flex flex-wrap gap-2 pt-4 text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
 						<Link
-							className={buttonStyles({ variant: sort === "recent" ? "secondary-filled" : "secondary-outline" })}
-							href={buildHref({ sort: "recent" })}
+							className={buttonStyles({
+								variant: sort === "recent" ? "secondary-filled" : "secondary-outline",
+							})}
+							href={buildHref({ sort: "recent", page: 1 })}
 							variant="unset"
 						>
 							Recent activity
 						</Link>
 						<Link
-							className={buttonStyles({ variant: sort === "count" ? "secondary-filled" : "secondary-outline" })}
-							href={buildHref({ sort: "count" })}
+							className={buttonStyles({
+								variant: sort === "count" ? "secondary-filled" : "secondary-outline",
+							})}
+							href={buildHref({ sort: "count", page: 1 })}
 							variant="unset"
 						>
 							Most cases
@@ -260,7 +277,9 @@ export default async function Page({
 
 												<div className="flex flex-wrap gap-2 pt-3">
 													<Link
-														className={buttonStyles({ variant: "secondary-filled" })}
+														className={buttonStyles({
+															variant: "secondary-filled",
+														})}
 														href={`/dashboard/moderation/guilds/${guildId}/cases/${case_.target_id}`}
 														variant="unset"
 													>
@@ -292,7 +311,7 @@ export default async function Page({
 								<div className="flex place-content-center pt-4">
 									<Link
 										className={buttonStyles({ variant: "secondary-filled" })}
-										href={buildHref({ q: "" })}
+										href={buildHref({ q: "", page: 1 })}
 										variant="unset"
 									>
 										Clear search
@@ -301,6 +320,54 @@ export default async function Page({
 							) : null}
 						</div>
 					)}
+
+					{hasPagination ? (
+						<div className="flex flex-wrap items-center justify-between gap-3">
+							<p className="text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
+								Page {numberFormatter.format(page)} of {numberFormatter.format(totalPages)}
+							</p>
+							<div className="flex gap-2">
+								{hasPrevPage ? (
+									<Link
+										className={buttonStyles({ variant: "secondary-outline" })}
+										href={buildHref({ page: page - 1 })}
+										variant="unset"
+									>
+										Previous
+									</Link>
+								) : (
+									<span
+										aria-disabled
+										className={buttonStyles({
+											variant: "secondary-outline",
+											isDisabled: true,
+										})}
+									>
+										Previous
+									</span>
+								)}
+								{hasNextPage ? (
+									<Link
+										className={buttonStyles({ variant: "secondary-outline" })}
+										href={buildHref({ page: page + 1 })}
+										variant="unset"
+									>
+										Next
+									</Link>
+								) : (
+									<span
+										aria-disabled
+										className={buttonStyles({
+											variant: "secondary-outline",
+											isDisabled: true,
+										})}
+									>
+										Next
+									</span>
+								)}
+							</div>
+						</div>
+					) : null}
 				</div>
 			</div>
 		</div>

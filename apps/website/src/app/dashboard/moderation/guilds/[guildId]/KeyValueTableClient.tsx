@@ -7,8 +7,22 @@ import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from 
 export type KeyValueTableRowValue =
 	| { readonly kind: "text"; readonly text: string }
 	| { readonly kind: "mono"; readonly text: string }
-	| { readonly kind: "channelLink"; readonly channelId: string }
-	| { readonly kind: "externalLink"; readonly href: string; readonly text: string; readonly mono?: boolean };
+	| {
+			readonly kind: "channelLink";
+			readonly channelId: string;
+			readonly channelName?: string | null;
+	  }
+	| {
+			readonly kind: "role";
+			readonly roleId: string;
+			readonly roleName?: string | null;
+	  }
+	| {
+			readonly kind: "externalLink";
+			readonly href: string;
+			readonly text: string;
+			readonly mono?: boolean;
+	  };
 
 export type KeyValueTableRow = {
 	readonly id: string;
@@ -26,12 +40,34 @@ function renderValue(value: KeyValueTableRowValue, { guildId }: { readonly guild
 		}
 		case "channelLink": {
 			const href = `https://discord.com/channels/${guildId}/${value.channelId}`;
+			const channelLabel = value.channelName?.trim();
+			const displayName = channelLabel ? `#${channelLabel}` : value.channelId;
 
 			return (
 				<Link href={href} target="_blank" variant="default">
-					<span className="font-mono text-base-sm">{value.channelId}</span>
+					<span className={channelLabel ? "text-base-sm" : "font-mono text-base-sm"}>{displayName}</span>
+					{channelLabel ? (
+						<span className="ml-2 font-mono text-base-xs text-base-neutral-500 dark:text-base-neutral-300">
+							{value.channelId}
+						</span>
+					) : null}
 					<ArrowUpRightIcon aria-hidden className="ml-2 inline size-4" />
 				</Link>
+			);
+		}
+		case "role": {
+			const roleLabel = value.roleName?.trim();
+			const displayName = roleLabel ? `@${roleLabel}` : value.roleId;
+
+			return (
+				<span className="inline-flex items-center gap-2">
+					<span className={roleLabel ? "text-base-sm" : "font-mono text-base-sm"}>{displayName}</span>
+					{roleLabel ? (
+						<span className="font-mono text-base-xs text-base-neutral-500 dark:text-base-neutral-300">
+							{value.roleId}
+						</span>
+					) : null}
+				</span>
 			);
 		}
 		case "externalLink": {

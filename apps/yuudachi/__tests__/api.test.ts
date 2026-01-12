@@ -24,8 +24,17 @@ let api!: typeof ApiModule.api;
 const createAppeal = vi.fn(async (input) => ({ id: "appeal-id", ...input }));
 vi.mock("../functions/appeals/createAppeal.js", () => ({ createAppeal }));
 
+const rolesList = [{ id: "role-id", name: "Moderators" }];
+const channelsList = [{ id: "channel-id", name: "general", type: 0 }];
+
 const bansFetch = vi.fn();
-const guildStub = { bans: { fetch: bansFetch } };
+const guildStub = {
+	bans: { fetch: bansFetch },
+	roles: { cache: new Map(rolesList.map((role) => [role.id, role])) },
+	channels: {
+		cache: new Map(channelsList.map((channel) => [channel.id, channel])),
+	},
+};
 const usersFetch = vi.fn(async (id: string) => ({ id, tag: `user#${id}` }));
 const client = {
 	guilds: { cache: new Map([["222078108977594368", guildStub]]) },
@@ -42,6 +51,7 @@ const caseRecord = {
 };
 
 const casesList = [{ target_id: "target", target_tag: "target#0001", cases_count: 2 }];
+const targetsCount = casesList.length;
 const appealsList = [
 	{
 		appeal_id: "1",
@@ -60,6 +70,10 @@ const sqlMock = createSqlMock<any>(async (strings?: TemplateStringsArray) => {
 
 	if (query.includes("from cases") && query.includes("group by")) {
 		return casesList;
+	}
+
+	if (query.includes("count(distinct target_id)")) {
+		return [{ count: targetsCount }];
 	}
 
 	if (query.includes("from cases") && query.includes("count(*)")) {
@@ -161,6 +175,29 @@ describe("api", () => {
 
 		expect(body.cases).toEqual(casesList);
 		expect(body.count).toBe(2);
+		expect(body.targets).toBe(targetsCount);
+	});
+
+	it("returns guild roles", async () => {
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/guilds/222078108977594368/roles",
+			headers: authHeader,
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json()).toEqual({ roles: rolesList });
+	});
+
+	it("returns guild channels", async () => {
+		const res = await api.inject({
+			method: "GET",
+			url: "/api/guilds/222078108977594368/channels",
+			headers: authHeader,
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json()).toEqual({ channels: channelsList });
 	});
 
 	it("returns cases for a single user", async () => {

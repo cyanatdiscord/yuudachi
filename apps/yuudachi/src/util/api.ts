@@ -10,6 +10,8 @@ import { createAppeal } from "../functions/appeals/createAppeal.js";
 import { CaseAction } from "../functions/cases/createCase.js";
 import type { RawCase } from "../functions/cases/transformCase.js";
 
+const CASES_PAGE_SIZE = 50;
+
 export const api = fastify({ trustProxy: true })
 	.register(helmet)
 	.register(sensible)
@@ -41,6 +43,41 @@ export const api = fastify({ trustProxy: true })
 				const guild = await client.guilds.fetch(id);
 
 				return guild;
+			});
+
+			app.get("/guilds/:id/roles", async (request) => {
+				const { id } = request.params as any;
+				const client = container.get(Client);
+				const guild = client.guilds.cache.get(id);
+
+				if (!guild) {
+					throw app.httpErrors.notFound("Guild not found.");
+				}
+
+				const roles = [...guild.roles.cache.values()].map((role) => ({
+					id: role.id,
+					name: role.name,
+				}));
+
+				return { roles };
+			});
+
+			app.get("/guilds/:id/channels", async (request) => {
+				const { id } = request.params as any;
+				const client = container.get(Client);
+				const guild = client.guilds.cache.get(id);
+
+				if (!guild) {
+					throw app.httpErrors.notFound("Guild not found.");
+				}
+
+				const channels = [...guild.channels.cache.values()].map((channel) => ({
+					id: channel.id,
+					name: channel.name,
+					type: channel.type,
+				}));
+
+				return { channels };
 			});
 
 			app.get("/guilds/:id/settings", async (request) => {
@@ -81,7 +118,9 @@ export const api = fastify({ trustProxy: true })
 						order by created_at desc
 						limit 1
 					`;
-					const moderator = await client.users.fetch(case_.mod_id, { force: true });
+					const moderator = await client.users.fetch(case_.mod_id, {
+						force: true,
+					});
 
 					return { user, moderator, banned, case: case_ };
 				}
@@ -91,7 +130,12 @@ export const api = fastify({ trustProxy: true })
 
 			app.get("/guilds/:id/cases", async (request) => {
 				const { id } = request.params as any;
+				const { page } = request.query as { page?: string };
 				const sql = container.get<Sql<any>>(kSQL);
+
+				const parsedPage = Number.parseInt(page ?? "1", 10);
+				const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+				const offset = (currentPage - 1) * CASES_PAGE_SIZE;
 
 				const cases = await sql<RawCase[]>`
 					select target_id, target_tag, count(*) cases_count
@@ -100,7 +144,8 @@ export const api = fastify({ trustProxy: true })
 						and action not in (1, 8)
 					group by target_id, target_tag
 					order by max(created_at) desc
-					limit 50
+					limit ${CASES_PAGE_SIZE}
+					offset ${offset}
 				`;
 
 				const [{ count }] = await sql<[{ count: number }]>`
@@ -110,7 +155,14 @@ export const api = fastify({ trustProxy: true })
 						and action not in (1, 8)
 				`;
 
-				return { cases, count };
+				const [{ count: targets }] = await sql<[{ count: number }]>`
+					select count(distinct target_id)
+					from cases
+					where guild_id = ${id}
+						and action not in (1, 8)
+				`;
+
+				return { cases, count, targets };
 			});
 
 			app.get("/guilds/:id/cases/:targetId", async (request) => {

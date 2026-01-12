@@ -41,6 +41,25 @@ type BotGuild = {
 	readonly autoModerationRules?: readonly unknown[] | null;
 };
 
+type GuildRole = {
+	readonly id: string;
+	readonly name: string;
+};
+
+type GuildChannel = {
+	readonly id: string;
+	readonly name: string;
+	readonly type: number;
+};
+
+type GuildRolesResponse = {
+	readonly roles: readonly GuildRole[];
+};
+
+type GuildChannelsResponse = {
+	readonly channels: readonly GuildChannel[];
+};
+
 type KeyValueRow = {
 	readonly id: string;
 	readonly label: string;
@@ -75,8 +94,33 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 		);
 	}
 
+	const [rolesData, channelsData] = await Promise.all([
+		fetch(`${process.env.BOT_API_URL}/api/guilds/${guildId}/roles`, {
+			headers: {
+				Authorization: `Bearer ${process.env.JWT_TOKEN}`,
+			},
+		}),
+		fetch(`${process.env.BOT_API_URL}/api/guilds/${guildId}/channels`, {
+			headers: {
+				Authorization: `Bearer ${process.env.JWT_TOKEN}`,
+			},
+		}),
+	]);
+
+	const roles = rolesData.status === 200 ? ((await rolesData.json()) as GuildRolesResponse).roles : [];
+	const channels = channelsData.status === 200 ? ((await channelsData.json()) as GuildChannelsResponse).channels : [];
+	const roleLookup = new Map(roles.map((role) => [role.id, role.name]));
+	const channelLookup = new Map(channels.map((channel) => [channel.id, channel.name]));
+
+	const resolveRoleName = (roleId?: string | null) => (roleId ? (roleLookup.get(roleId) ?? null) : null);
+	const resolveChannelName = (channelId?: string | null) => (channelId ? (channelLookup.get(channelId) ?? null) : null);
+
 	const numberFormatter = new Intl.NumberFormat("en-US");
-	const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
+
+	const dateFormatter = new Intl.DateTimeFormat("en-US", {
+		dateStyle: "medium",
+		timeStyle: "short",
+	});
 
 	const formatNumber = (value: number | null | undefined) =>
 		typeof value === "number" && Number.isFinite(value) ? numberFormatter.format(value) : "—";
@@ -149,59 +193,99 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 	const settingsRows: KeyValueRow[] = [
 		{
 			id: "mod-role",
-			label: "Moderator role ID",
-			value: modRoleId ? { kind: "mono", text: modRoleId } : { kind: "text", text: "Not set" },
+			label: "Moderator role",
+			value: modRoleId
+				? {
+						kind: "role",
+						roleId: modRoleId,
+						roleName: resolveRoleName(modRoleId),
+					}
+				: { kind: "text", text: "Not set" },
 		},
+
 		{
 			id: "mod-log",
 			label: "Mod log channel",
 			value: guildSettings.mod_log_channel_id
-				? { kind: "channelLink", channelId: guildSettings.mod_log_channel_id }
+				? {
+						kind: "channelLink",
+						channelId: guildSettings.mod_log_channel_id,
+						channelName: resolveChannelName(guildSettings.mod_log_channel_id),
+					}
 				: { kind: "text", text: "Not set" },
 		},
+
 		{
 			id: "guild-log-webhook",
 			label: "Guild log webhook",
-			value: { kind: "text", text: guildSettings.guild_log_webhook_id ? "Connected" : "Not set" },
+			value: {
+				kind: "text",
+				text: guildSettings.guild_log_webhook_id ? "Connected" : "Not set",
+			},
 		},
 		{
 			id: "member-log-webhook",
 			label: "Member log webhook",
-			value: { kind: "text", text: guildSettings.member_log_webhook_id ? "Connected" : "Not set" },
+			value: {
+				kind: "text",
+				text: guildSettings.member_log_webhook_id ? "Connected" : "Not set",
+			},
 		},
 		{
 			id: "report-channel",
 			label: "Report channel",
 			value: guildSettings.report_channel_id
-				? { kind: "channelLink", channelId: guildSettings.report_channel_id }
+				? {
+						kind: "channelLink",
+						channelId: guildSettings.report_channel_id,
+						channelName: resolveChannelName(guildSettings.report_channel_id),
+					}
 				: { kind: "text", text: "Not set" },
 		},
+
 		{
 			id: "appeal-channel",
 			label: "Appeal channel",
 			value: guildSettings.appeal_channel_id
-				? { kind: "channelLink", channelId: guildSettings.appeal_channel_id }
+				? {
+						kind: "channelLink",
+						channelId: guildSettings.appeal_channel_id,
+						channelName: resolveChannelName(guildSettings.appeal_channel_id),
+					}
 				: { kind: "text", text: "Not set" },
 		},
+
 		{
 			id: "locale",
 			label: "Locale",
-			value: { kind: "text", text: guildSettings.locale ?? guild.preferredLocale ?? "—" },
+			value: {
+				kind: "text",
+				text: guildSettings.locale ?? guild.preferredLocale ?? "—",
+			},
 		},
 		{
 			id: "force-locale",
 			label: "Force locale",
-			value: { kind: "text", text: guildSettings.force_locale ? "Enabled" : "Disabled" },
+			value: {
+				kind: "text",
+				text: guildSettings.force_locale ? "Enabled" : "Disabled",
+			},
 		},
 		{
 			id: "log-ignore",
 			label: "Log ignore channels",
-			value: { kind: "text", text: `${guildSettings.log_ignore_channels?.length ?? 0} channels` },
+			value: {
+				kind: "text",
+				text: `${guildSettings.log_ignore_channels?.length ?? 0} channels`,
+			},
 		},
 		{
 			id: "automod-ignore",
 			label: "AutoMod ignore roles",
-			value: { kind: "text", text: `${guildSettings.automod_ignore_roles?.length ?? 0} roles` },
+			value: {
+				kind: "text",
+				text: `${guildSettings.automod_ignore_roles?.length ?? 0} roles`,
+			},
 		},
 	];
 
@@ -257,7 +341,10 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 		{
 			id: "mod-role",
 			label: "Mod role",
-			value: { kind: "text", text: modRoleId ? (hasModRole ? "Granted" : "Missing") : "Not required" },
+			value: {
+				kind: "text",
+				text: modRoleId ? (hasModRole ? "Granted" : "Missing") : "Not required",
+			},
 		},
 		{
 			id: "permissions",
@@ -383,36 +470,6 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 									<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 										<div className="flex place-items-center gap-2">
 											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500" />
-											<h2 className="text-base-label-lg font-semibold">Features</h2>
-										</div>
-										<div className="pt-4">
-											{(guild.features?.length ?? 0) > 0 ? (
-												<div className="flex flex-wrap gap-2">
-													{(guild.features ?? []).slice(0, 12).map((feature) => (
-														<span
-															className="max-w-full rounded-full border border-base-neutral-200 px-2.5 py-1 text-base-xs font-semibold break-all text-base-neutral-600 dark:border-base-neutral-600 dark:text-base-neutral-200"
-															key={feature}
-														>
-															{feature}
-														</span>
-													))}
-													{(guild.features?.length ?? 0) > 12 ? (
-														<span className="max-w-full rounded-full border border-base-neutral-200 px-2.5 py-1 text-base-xs font-semibold break-all text-base-neutral-600 dark:border-base-neutral-600 dark:text-base-neutral-200">
-															+{formatNumber((guild.features?.length ?? 0) - 12)} more
-														</span>
-													) : null}
-												</div>
-											) : (
-												<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
-													No special features are listed for this guild.
-												</p>
-											)}
-										</div>
-									</div>
-
-									<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
-										<div className="flex place-items-center gap-2">
-											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500" />
 											<h2 className="text-base-label-lg font-semibold">Quick checks</h2>
 										</div>
 										<div className="grid gap-3 pt-4 text-base-sm">
@@ -438,6 +495,36 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 													{guildSettings.member_log_webhook_id ? "Connected" : "Not set"}
 												</span>
 											</div>
+										</div>
+									</div>
+
+									<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
+										<div className="flex place-items-center gap-2">
+											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500" />
+											<h2 className="text-base-label-lg font-semibold">Features</h2>
+										</div>
+										<div className="pt-4">
+											{(guild.features?.length ?? 0) > 0 ? (
+												<div className="flex flex-wrap gap-2">
+													{(guild.features ?? []).slice(0, 12).map((feature) => (
+														<span
+															className="max-w-full rounded-full border border-base-neutral-200 px-2.5 py-1 text-base-xs font-semibold break-all text-base-neutral-600 dark:border-base-neutral-600 dark:text-base-neutral-200"
+															key={feature}
+														>
+															{feature}
+														</span>
+													))}
+													{(guild.features?.length ?? 0) > 12 ? (
+														<span className="max-w-full rounded-full border border-base-neutral-200 px-2.5 py-1 text-base-xs font-semibold break-all text-base-neutral-600 dark:border-base-neutral-600 dark:text-base-neutral-200">
+															+{formatNumber((guild.features?.length ?? 0) - 12)} more
+														</span>
+													) : null}
+												</div>
+											) : (
+												<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
+													No special features are listed for this guild.
+												</p>
+											)}
 										</div>
 									</div>
 								</div>
