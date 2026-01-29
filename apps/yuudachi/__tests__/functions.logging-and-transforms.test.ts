@@ -1,5 +1,5 @@
 import type * as FrameworkModule from "@yuudachi/framework";
-import type { APIEmbed } from "discord.js";
+import type { APIEmbed, APIEmbedField } from "discord.js";
 import i18next from "i18next";
 import { describe, expect, it, vi } from "vitest";
 import { Color } from "../src/Constants.js";
@@ -9,13 +9,20 @@ import { formatMessageToEmbed } from "../src/functions/logging/formatMessageToEm
 import { generateCaseEmbed } from "../src/functions/logging/generateCaseEmbed.js";
 import { generateCasePayload } from "../src/functions/logging/generateCasePayload.js";
 import { generateReportEmbed } from "../src/functions/logging/generateReportEmbed.js";
+import { generateSpamGuildLogEmbed } from "../src/functions/logging/generateSpamGuildLogEmbed.js";
 import { transformReport } from "../src/functions/reports/transformReport.js";
 
 vi.mock("@yuudachi/framework", async (importOriginal) => {
 	const mod = await importOriginal<typeof FrameworkModule>();
 	return {
 		...mod,
-		addFields: vi.fn((embed: APIEmbed) => embed),
+		addFields: vi.fn((embed: APIEmbed, ...fields: APIEmbedField[]) => {
+			if (fields.length > 0) {
+				return { ...embed, fields: [...(embed.fields ?? []), ...fields] };
+			}
+
+			return embed;
+		}),
 	};
 });
 
@@ -246,5 +253,134 @@ describe("formatMessageToEmbed", () => {
 
 		expect(embed.description).toBe(i18next.t("common.errors.no_content", { lng: locale }));
 		expect(embed.image?.url).toBe("https://example.com/image.png");
+	});
+});
+
+describe("generateSpamGuildLogEmbed", () => {
+	const createMockMember = () =>
+		({
+			user: {
+				tag: "SpamUser#0001",
+				id: "123456789",
+				displayAvatarURL: () => "https://avatar.url/spam.png",
+			},
+		}) as any;
+
+	const createMockCase = (caseId = 42) =>
+		({
+			caseId,
+			guildId: "987654321",
+			action: 1,
+			createdAt: "2024-01-01",
+		}) as any;
+
+	it("should build mention spam embed with correct structure", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+
+		const embed = generateSpamGuildLogEmbed(member, "111222333", "mentions", { totalMentionCount: 25 }, case_, locale);
+
+		expect(embed.author?.name).toBe("SpamUser#0001 (123456789)");
+		expect(embed.author?.icon_url).toBe("https://avatar.url/spam.png");
+		expect(embed.color).toBe(Color.DiscordWarning);
+		expect(embed.title).toBe(i18next.t("log.guild_log.spam_detection.title", { lng: locale }));
+		expect(embed.footer?.text).toBe(
+			i18next.t("log.guild_log.spam_detection.case_footer", { case_id: 42, lng: locale }),
+		);
+		expect(embed.description).toContain(i18next.t("log.guild_log.spam_detection.type_mentions", { lng: locale }));
+		expect(embed.timestamp).toBeDefined();
+	});
+
+	it("should build attachment spam embed with hashes in description and metadata in field", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+		const hashes = ["abc123hash", "def456hash", "ghi789hash"];
+
+		const embed = generateSpamGuildLogEmbed(
+			member,
+			"111222333",
+			"attachments",
+			{
+				totalAttachmentCount: 15,
+				maxDuplicateCount: 5,
+				attachmentHashes: hashes,
+			},
+			case_,
+			locale,
+		);
+
+		expect(embed.description).toContain("abc123hash");
+		expect(embed.description).toContain("def456hash");
+		expect(embed.description).toContain("ghi789hash");
+		expect(embed.fields).toBeDefined();
+		expect(embed.fields?.length).toBe(1);
+		expect(embed.fields?.[0]?.name).toBe("\u200B");
+		expect(embed.fields?.[0]?.value).toContain(
+			i18next.t("log.guild_log.spam_detection.type_attachments", { lng: locale }),
+		);
+	});
+
+	it("should build attachment spam embed without hashes when none provided", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+
+		const embed = generateSpamGuildLogEmbed(
+			member,
+			"111222333",
+			"attachments",
+			{
+				totalAttachmentCount: 15,
+				maxDuplicateCount: 0,
+			},
+			case_,
+			locale,
+		);
+
+		expect(embed.description).toContain(i18next.t("log.guild_log.spam_detection.type_attachments", { lng: locale }));
+		expect(embed.fields).toBeUndefined();
+	});
+
+	it("should build content spam embed", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+
+		const embed = generateSpamGuildLogEmbed(member, "111222333", "content", { totalContentCount: 10 }, case_, locale);
+
+		expect(embed.description).toContain(i18next.t("log.guild_log.spam_detection.type_content", { lng: locale }));
+		expect(embed.color).toBe(Color.DiscordWarning);
+	});
+
+	it("should build interaction spam embed", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+
+		const embed = generateSpamGuildLogEmbed(
+			member,
+			"111222333",
+			"interactions",
+			{ totalInteractionCount: 50 },
+			case_,
+			locale,
+		);
+
+		expect(embed.description).toContain(i18next.t("log.guild_log.spam_detection.type_interactions", { lng: locale }));
+	});
+
+	it("should include channel mention when channelId provided", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+
+		const embed = generateSpamGuildLogEmbed(member, "111222333", "mentions", { totalMentionCount: 25 }, case_, locale);
+
+		expect(embed.description).toContain("<#111222333>");
+	});
+
+	it("should omit channel line when channelId is null", () => {
+		const member = createMockMember();
+		const case_ = createMockCase();
+
+		const embed = generateSpamGuildLogEmbed(member, null, "mentions", { totalMentionCount: 25 }, case_, locale);
+
+		expect(embed.description).not.toContain("<#");
 	});
 });

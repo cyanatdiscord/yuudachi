@@ -1,5 +1,5 @@
-import { logger, kRedis, container } from "@yuudachi/framework";
-import { Client, type Attachment, type Snowflake } from "discord.js";
+import { container, kWebhooks, kRedis, logger, truncateEmbed } from "@yuudachi/framework";
+import { Client, type Attachment, type Snowflake, type Webhook } from "discord.js";
 import i18next from "i18next";
 import type { Redis } from "ioredis";
 import {
@@ -10,7 +10,7 @@ import {
 	SPAM_THRESHOLD,
 } from "../../Constants.js";
 import { type Case, CaseAction, createCase } from "../cases/createCase.js";
-import { sendSpamGuildLog } from "../logging/sendSpamGuildLog.js";
+import { generateSpamGuildLogEmbed } from "../logging/generateSpamGuildLogEmbed.js";
 import { upsertCaseLog } from "../logging/upsertCaseLog.js";
 import { checkLogChannel } from "../settings/checkLogChannel.js";
 import { getGuildSetting, SettingsKeys } from "../settings/getGuildSetting.js";
@@ -75,6 +75,9 @@ export async function handleAntiSpam(
 
 	if (mentionExceeded || contentExceeded || attachmentsExceeded) {
 		const locale = await getGuildSetting(guildId, SettingsKeys.Locale);
+		const guildLogWebhookId = await getGuildSetting(guildId, SettingsKeys.GuildLogWebhookId);
+		const webhooks = container.get<Map<string, Webhook>>(kWebhooks);
+		const webhook = guildLogWebhookId ? webhooks.get(guildLogWebhookId) : undefined;
 
 		await redis.setex(`guild:${guildId}:user:${userId}:ban`, 15, "");
 
@@ -104,7 +107,14 @@ export async function handleAntiSpam(
 
 			await redis.del(`guild:${guildId}:user:${userId}:mentions`);
 
-			await sendSpamGuildLog(guild, member, channelId, "mentions", { totalMentionCount }, case_!, locale);
+			if (webhook) {
+				const embed = generateSpamGuildLogEmbed(member, channelId, "mentions", { totalMentionCount }, case_!, locale);
+				await webhook.send({
+					embeds: [truncateEmbed(embed)],
+					username: client.user.username,
+					avatarURL: client.user.displayAvatarURL(),
+				});
+			}
 		} else if (attachmentsExceeded) {
 			logger.info(
 				{
@@ -135,19 +145,25 @@ export async function handleAntiSpam(
 			];
 			await redis.del(...deleteKeys);
 
-			await sendSpamGuildLog(
-				guild,
-				member,
-				channelId,
-				"attachments",
-				{
-					totalAttachmentCount,
-					maxDuplicateCount: duplicateResult.maxDuplicateCount,
-					attachmentHashes: duplicateResult.attachmentHashes,
-				},
-				case_!,
-				locale,
-			);
+			if (webhook) {
+				const embed = generateSpamGuildLogEmbed(
+					member,
+					channelId,
+					"attachments",
+					{
+						totalAttachmentCount,
+						maxDuplicateCount: duplicateResult.maxDuplicateCount,
+						attachmentHashes: duplicateResult.attachmentHashes,
+					},
+					case_!,
+					locale,
+				);
+				await webhook.send({
+					embeds: [truncateEmbed(embed)],
+					username: client.user.username,
+					avatarURL: client.user.displayAvatarURL(),
+				});
+			}
 		} else if (contentExceeded) {
 			logger.info(
 				{
@@ -174,7 +190,14 @@ export async function handleAntiSpam(
 
 			await redis.del(`guild:${guildId}:user:${userId}:contenthash:${contentHash}`);
 
-			await sendSpamGuildLog(guild, member, channelId, "content", { totalContentCount }, case_!, locale);
+			if (webhook) {
+				const embed = generateSpamGuildLogEmbed(member, channelId, "content", { totalContentCount }, case_!, locale);
+				await webhook.send({
+					embeds: [truncateEmbed(embed)],
+					username: client.user.username,
+					avatarURL: client.user.displayAvatarURL(),
+				});
+			}
 		}
 
 		await upsertCaseLog(guild, client.user, case_!);
@@ -222,6 +245,9 @@ export async function handleInteractionSpam(
 	}
 
 	const locale = await getGuildSetting(guildId, SettingsKeys.Locale);
+	const guildLogWebhookId = await getGuildSetting(guildId, SettingsKeys.GuildLogWebhookId);
+	const webhooks = container.get<Map<string, Webhook>>(kWebhooks);
+	const webhook = guildLogWebhookId ? webhooks.get(guildLogWebhookId) : undefined;
 
 	await redis.setex(`guild:${guildId}:user:${userId}:ban`, 15, "");
 	await redis.setex(`guild:${guildId}:user:${userId}:unban`, 15, "");
@@ -248,7 +274,21 @@ export async function handleInteractionSpam(
 
 	await redis.del(`guild:${guildId}:user:${userId}:interactions`);
 
-	await sendSpamGuildLog(guild, member, channelId, "interactions", { totalInteractionCount }, case_, locale);
+	if (webhook) {
+		const embed = generateSpamGuildLogEmbed(
+			member,
+			channelId,
+			"interactions",
+			{ totalInteractionCount },
+			case_,
+			locale,
+		);
+		await webhook.send({
+			embeds: [truncateEmbed(embed)],
+			username: client.user.username,
+			avatarURL: client.user.displayAvatarURL(),
+		});
+	}
 
 	await upsertCaseLog(guild, client.user, case_);
 }
