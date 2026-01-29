@@ -68,20 +68,6 @@ export async function handleAntiSpam(
 			? await totalAttachmentDuplicates(guildId, userId, mediaAttachments)
 			: { maxDuplicateCount: 0, attachmentHashes: [] as string[] };
 
-	// Record fingerprints to database (fire and forget)
-	for (const [index, hash] of duplicateResult.attachmentHashes.entries()) {
-		const attachment = mediaAttachments[index];
-		void recordFingerprint({
-			hash,
-			guildId,
-			userId,
-			channelId,
-			fileSize: attachment?.size ?? null,
-			contentType: attachment?.contentType ?? null,
-			filename: attachment?.name ?? null,
-		});
-	}
-
 	const mentionExceeded = totalMentionCount >= MENTION_THRESHOLD;
 	const contentExceeded = totalContentCount >= SPAM_THRESHOLD;
 	const attachmentsExceeded =
@@ -153,6 +139,21 @@ export async function handleAntiSpam(
 				reason: i18next.t("log.mod_log.spam.reason_attachments", { lng: locale }),
 				deleteMessageDays: 1,
 			});
+
+			// Record fingerprints to database with case linkage (fire and forget)
+			for (const [index, hash] of duplicateResult.attachmentHashes.entries()) {
+				const attachment = mediaAttachments[index];
+				void recordFingerprint({
+					hash,
+					guildId,
+					userId,
+					channelId,
+					caseId: case_.caseId,
+					fileSize: attachment?.size ?? null,
+					contentType: attachment?.contentType ?? null,
+					filename: attachment?.name ?? null,
+				});
+			}
 
 			const deleteKeys = [
 				`guild:${guildId}:user:${userId}:attachments`,
