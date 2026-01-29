@@ -34,6 +34,19 @@
   - `logger.ts` - Pino logger configuration.
 - `packages/http/src/` - Fastify HTTP utilities and Discord interaction verification.
 
+## Website routes (`apps/website/src/app/`)
+
+- `/` - Home (logo)
+- `/login` - Discord OAuth login
+- `/api/discord/callback`, `/api/discord/logout` - OAuth handlers
+- `/dashboard` - Redirects to moderation
+- `/dashboard/appeal` - Ban appeal form
+- `/dashboard/moderation/` - Moderation hub (sidebar layout)
+  - `/guilds` - Guild list
+  - `/guilds/[guildId]/` - Guild overview (tabs: overview, settings, access)
+    - `/cases`, `/cases/[caseId]` - Cases list and details
+    - `/appeals`, `/appeals/[appealId]` - Appeals list and details
+
 ## Package manager
 
 - Use `pnpm` only (v10.24.0). Node.js >= 24.0.0 required.
@@ -89,6 +102,7 @@
 - Events implement `Event` interface with `execute()` method.
 - Interaction definitions in `interactions/` as `const satisfies RESTPostAPIApplicationCommandsJSONBody`.
 - All user-facing strings use i18next.
+- Localization: only update `apps/yuudachi/locales/en-US/translation.json` manually. Other locale files are maintained by a translation service and should not be modified.
 
 ## Code style: dependency injection
 
@@ -113,6 +127,12 @@
 
 - Pino logger from `packages/framework/src/logger.ts`. Configure via `LOGGER_NAME`.
 - Structured logging with context objects.
+- Context object patterns:
+  - Commands: `{ command: { name, type }, userId, guildId?, memberId? }`
+  - Events: `{ event: { name, event }, guildId?, memberId?, channelId? }`
+  - Guild actions: `{ event, guildId, userId: client.user.id, memberId }`
+  - Jobs: `{ job: { name } }`
+  - WebSocket: `{ msg, url, identity, code?, reason? }`
 - Use `logger.info`/`logger.warn`/`logger.error` with descriptive messages.
 - Try-catch with async/await. Error casting: `const error_ = error as Error`.
 - i18next for localized error messages.
@@ -125,6 +145,21 @@
 - TailwindCSS 4 with `cva` for variants, `tailwind-merge` for merging.
 - React Aria Components for accessible primitives, TanStack Table for data tables.
 - `lucide-react` for icons, `next-themes` for dark mode.
+
+### UI components (`apps/website/src/components/ui/`)
+
+- **Check existing components first** before creating new UI elements.
+- Form: `Button`, `Input`, `TextField`, `SearchField`, `Checkbox`, `RadioGroup`, `Switch`, `Select`, `ComboBox`, `NumberField`
+- Date/Time: `DatePicker`, `DateField`, `TimeField`, `Calendar`
+- Layout: `Dialog`, `Modal`, `Sheet`, `Popover`, `Sidebar`, `Table`
+- Navigation: `Dropdown`, `Menu`, `Tabs`, `Breadcrumbs`
+- Display: `Tooltip`, `Separator`, `Link`, `Field`, `GridList`, `Disclosure`
+
+### Design tokens (`apps/website/src/styles/base.css`)
+
+- Colors: `base-neutral-*` (0-900), `base-tangerine-*` (primary), `base-sunset-*` (error/destructive)
+- Typography: `text-base-heading-*`, `text-base-label-*`, `text-base-*` (xl/lg/md/sm/xs)
+- Use design tokens, not arbitrary Tailwind colors.
 
 ## ESLint notes
 

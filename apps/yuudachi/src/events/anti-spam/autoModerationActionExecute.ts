@@ -27,10 +27,16 @@ export default class implements Event {
 					continue;
 				}
 
-				await handleAntiSpam(autoModAction.guild.id, autoModAction.userId, autoModAction.content, {
-					name: this.name,
-					event: this.event,
-				});
+				await handleAntiSpam(
+					autoModAction.guild.id,
+					autoModAction.userId,
+					autoModAction.channelId,
+					autoModAction.content,
+					{
+						name: this.name,
+						event: this.event,
+					},
+				);
 			} catch (error) {
 				const error_ = error as Error;
 				logger.error(error_, error_.message);

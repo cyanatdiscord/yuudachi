@@ -34,7 +34,7 @@ export default class implements Event {
 					continue;
 				}
 
-				await handleInteractionSpam(message.guildId, executor.id, {
+				await handleInteractionSpam(message.guildId, executor.id, message.channelId, {
 					name: this.name,
 					event: this.event,
 				});

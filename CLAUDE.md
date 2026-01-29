@@ -102,6 +102,7 @@
 - Events implement `Event` interface with `execute()` method.
 - Interaction definitions in `interactions/` as `const satisfies RESTPostAPIApplicationCommandsJSONBody`.
 - All user-facing strings use i18next.
+- Localization: only update `apps/yuudachi/locales/en-US/translation.json` manually. Other locale files are maintained by a translation service and should not be modified.
 
 ## Code style: dependency injection
 

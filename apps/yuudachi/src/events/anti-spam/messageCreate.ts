@@ -34,6 +34,7 @@ export default class implements Event {
 				await handleAntiSpam(
 					message.guildId,
 					message.member.id,
+					message.channelId,
 					message.content ?? "",
 					{
 						name: this.name,

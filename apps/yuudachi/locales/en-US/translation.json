@@ -580,6 +580,21 @@
 				"authors_one": "• Author: {{count}}",
 				"authors_other": "• Authors: {{count}}",
 				"time": "• Timespan: {{time}}"
+			},
+			"spam_detection": {
+				"title": "Spam detected",
+				"channel": "• Channel: {{- channel}}",
+				"type_mentions": "• Type: Mention spam",
+				"type_attachments": "• Type: Attachment spam",
+				"type_content": "• Type: Content spam",
+				"type_interactions": "• Type: Interaction spam",
+				"total_mentions": "• Total mentions: {{count}} / {{threshold}}",
+				"total_attachments": "• Total attachments: {{count}} / {{threshold}}",
+				"max_duplicates": "• Max duplicates: {{count}} / {{threshold}}",
+				"total_content": "• Duplicate messages: {{count}} / {{threshold}}",
+				"total_interactions": "• Total interactions: {{count}} / {{threshold}}",
+				"action": "• Action: {{action}}",
+				"case_footer": "Case {{case_id}}"
 			}
 		},
 		"anti_raid_nuke": {

@@ -10,6 +10,7 @@ import {
 	SPAM_THRESHOLD,
 } from "../../Constants.js";
 import { type Case, CaseAction, createCase } from "../cases/createCase.js";
+import { sendSpamGuildLog } from "../logging/sendSpamGuildLog.js";
 import { upsertCaseLog } from "../logging/upsertCaseLog.js";
 import { checkLogChannel } from "../settings/checkLogChannel.js";
 import { getGuildSetting, SettingsKeys } from "../settings/getGuildSetting.js";
@@ -21,6 +22,7 @@ import { totalMentions } from "./totalMentions.js";
 export async function handleAntiSpam(
 	guildId: Snowflake,
 	userId: Snowflake,
+	channelId: Snowflake | null,
 	content: string,
 	event: { event: string; name: string },
 	attachments?: readonly Attachment[] | null,
@@ -101,6 +103,8 @@ export async function handleAntiSpam(
 			});
 
 			await redis.del(`guild:${guildId}:user:${userId}:mentions`);
+
+			await sendSpamGuildLog(guild, member, channelId, "mentions", { totalMentionCount }, case_!, locale);
 		} else if (attachmentsExceeded) {
 			logger.info(
 				{
@@ -130,6 +134,20 @@ export async function handleAntiSpam(
 				...duplicateResult.attachmentHashes.map((hash) => `guild:${guildId}:user:${userId}:attachmenthash:${hash}`),
 			];
 			await redis.del(...deleteKeys);
+
+			await sendSpamGuildLog(
+				guild,
+				member,
+				channelId,
+				"attachments",
+				{
+					totalAttachmentCount,
+					maxDuplicateCount: duplicateResult.maxDuplicateCount,
+					attachmentHashes: duplicateResult.attachmentHashes,
+				},
+				case_!,
+				locale,
+			);
 		} else if (contentExceeded) {
 			logger.info(
 				{
@@ -155,6 +173,8 @@ export async function handleAntiSpam(
 			const contentHash = createContentHash(normalizedContent);
 
 			await redis.del(`guild:${guildId}:user:${userId}:contenthash:${contentHash}`);
+
+			await sendSpamGuildLog(guild, member, channelId, "content", { totalContentCount }, case_!, locale);
 		}
 
 		await upsertCaseLog(guild, client.user, case_!);
@@ -164,6 +184,7 @@ export async function handleAntiSpam(
 export async function handleInteractionSpam(
 	guildId: Snowflake,
 	userId: Snowflake,
+	channelId: Snowflake | null,
 	event: { event: string; name: string },
 ): Promise<void> {
 	const client = container.get<Client<true>>(Client);
@@ -226,6 +247,8 @@ export async function handleInteractionSpam(
 	});
 
 	await redis.del(`guild:${guildId}:user:${userId}:interactions`);
+
+	await sendSpamGuildLog(guild, member, channelId, "interactions", { totalInteractionCount }, case_, locale);
 
 	await upsertCaseLog(guild, client.user, case_);
 }
