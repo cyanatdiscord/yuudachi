@@ -8,7 +8,7 @@ import * as checkScamModule from "../src/functions/anti-scam/checkScam.js";
 import { checkScam } from "../src/functions/anti-scam/checkScam.js";
 import { checkResponse, refreshScamDomains, ScamRedisKeys } from "../src/functions/anti-scam/refreshScamDomains.js";
 import { totalScams } from "../src/functions/anti-scam/totalScams.js";
-import { mockContainerGet, mockLogger } from "./mocks.js";
+import { createRedisMock, mockContainerGet, mockLogger, type RedisMock } from "./mocks.js";
 
 const resolveRedirectMock = vi.hoisted(() => vi.fn<(url: string) => Promise<string>>());
 const request = vi.hoisted(() =>
@@ -23,6 +23,9 @@ vi.mock("../src/util/resolveRedirect.js", () => ({
 	resolveRedirect: resolveRedirectMock,
 }));
 
+/**
+ * Multi/pipeline stub for Redis transactions used by refreshScamDomains
+ */
 type MultiStub = {
 	del(key: string): MultiStub;
 	exec(): Promise<[unknown, unknown][]>;
@@ -32,7 +35,7 @@ type MultiStub = {
 	set(key: string, value: number): MultiStub;
 };
 
-const createMultiStub = (execValue: [unknown, unknown][]): MultiStub => {
+function createMultiStub(execValue: [unknown, unknown][]): MultiStub {
 	const stub: Partial<MultiStub> = {};
 	stub.get = vi.fn(() => stub as MultiStub);
 	stub.scard = vi.fn(() => stub as MultiStub);
@@ -41,17 +44,24 @@ const createMultiStub = (execValue: [unknown, unknown][]): MultiStub => {
 	stub.set = vi.fn(() => stub as MultiStub);
 	stub.exec = vi.fn(async () => execValue);
 	return stub as MultiStub;
+}
+
+/**
+ * Extended Redis mock with multi() support for scam domain refresh tests
+ */
+type ScamRedisMock = RedisMock & {
+	multi: ReturnType<typeof vi.fn>;
 };
 
-type RedisStub = {
-	expire?(key: string, seconds: number): Promise<number>;
-	incrby?(key: string, amount: number): Promise<number>;
-	multi?(): MultiStub;
-	sismember?(set: string, member: string): Promise<number>;
-	smembers?(key: string): Promise<string[]>;
-};
+function createScamRedisMock(multiExecValue: [unknown, unknown][] = []): ScamRedisMock {
+	const base = createRedisMock();
+	return {
+		...base,
+		multi: vi.fn(() => createMultiStub(multiExecValue)),
+	};
+}
 
-const asRedis = (stub: RedisStub): Redis => stub as unknown as Redis;
+const asRedis = (stub: Partial<ScamRedisMock>): Redis => stub as unknown as Redis;
 
 const envBackup = {
 	SCAM_DOMAIN_URL: process.env.SCAM_DOMAIN_URL,
@@ -93,13 +103,7 @@ describe("refreshScamDomains", () => {
 		delete process.env.SCAM_DOMAIN_URL;
 		delete process.env.SCAM_DOMAIN_DISCORD_URL;
 
-		const redis = {
-			multi: vi.fn(() => createMultiStub([])),
-			smembers: vi.fn(),
-			sismember: vi.fn(),
-			incrby: vi.fn(),
-			expire: vi.fn(),
-		} satisfies RedisStub;
+		const redis = createScamRedisMock();
 
 		await expect(refreshScamDomains(asRedis(redis))).resolves.toEqual([]);
 		expect(mockLogger.warn).toHaveBeenCalledWith("Missing env var: SCAM_DOMAIN_URL");
@@ -121,13 +125,8 @@ describe("refreshScamDomains", () => {
 			[null, "OK"],
 		];
 		const multiStub = createMultiStub(execValue);
-		const redis = {
-			multi: vi.fn(() => multiStub),
-			smembers: vi.fn(),
-			sismember: vi.fn(),
-			incrby: vi.fn(),
-			expire: vi.fn(),
-		} satisfies RedisStub;
+		const redis = createScamRedisMock();
+		redis.multi = vi.fn(() => multiStub);
 
 		request.mockResolvedValue({
 			statusCode: 200,
@@ -146,13 +145,7 @@ describe("refreshScamDomains", () => {
 		process.env.SCAM_DOMAIN_DISCORD_URL = "https://scams.test/discord-domains";
 		process.env.SCAM_DOMAIN_IDENTITY = "identity";
 
-		const redis = {
-			multi: vi.fn(() => createMultiStub([])),
-			smembers: vi.fn(),
-			sismember: vi.fn(),
-			incrby: vi.fn(),
-			expire: vi.fn(),
-		} satisfies RedisStub;
+		const redis = createScamRedisMock();
 
 		request.mockResolvedValue({
 			statusCode: 502,
@@ -180,13 +173,8 @@ describe("refreshScamDomains", () => {
 			[null, "OK"],
 		];
 		const multiStub = createMultiStub(execValue);
-		const redis = {
-			multi: vi.fn(() => multiStub),
-			smembers: vi.fn(),
-			sismember: vi.fn(),
-			incrby: vi.fn(),
-			expire: vi.fn(),
-		} satisfies RedisStub;
+		const redis = createScamRedisMock();
+		redis.multi = vi.fn(() => multiStub);
 
 		request
 			.mockResolvedValueOnce({
@@ -223,10 +211,9 @@ describe("refreshScamDomains", () => {
 
 describe("checkScam", () => {
 	it("detects direct scam domains", async () => {
-		const redis = {
+		const redis = createRedisMock({
 			smembers: vi.fn(async (key: string) => (key === ScamRedisKeys.SCAM_DOMAIN_URL ? ["malicious.test"] : [])),
-			sismember: vi.fn(async () => 0),
-		} satisfies RedisStub;
+		});
 		mockContainerGet.mockReturnValue(redis);
 
 		const result = await checkScam("Check https://malicious.test now");
@@ -242,12 +229,12 @@ describe("checkScam", () => {
 	it("follows link shorteners and matches hashed discord domains", async () => {
 		const redirectHost = "discord.bad";
 		const hashedRedirect = createHash("sha256").update(redirectHost).digest("hex");
-		const redis = {
+		const redis = createRedisMock({
 			smembers: vi.fn(async (key: string) => (key === ScamRedisKeys.SCAM_DOMAIN_DISCORD_URL ? [hashedRedirect] : [])),
 			sismember: vi.fn(async (set: string, member: string) =>
 				set === "linkshorteners" && member === "short.test" ? 1 : 0,
 			),
-		} satisfies RedisStub;
+		});
 		mockContainerGet.mockReturnValue(redis);
 		resolveRedirectMock.mockResolvedValue(`https://${redirectHost}/landing`);
 
@@ -262,10 +249,9 @@ describe("checkScam", () => {
 	});
 
 	it("logs and suppresses redirect resolution failures", async () => {
-		const redis = {
-			smembers: vi.fn(async () => [] as string[]),
+		const redis = createRedisMock({
 			sismember: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		});
 		mockContainerGet.mockReturnValue(redis);
 		resolveRedirectMock.mockRejectedValue(new Error("network down"));
 
@@ -276,10 +262,9 @@ describe("checkScam", () => {
 
 describe("totalScams", () => {
 	it("increments scam counter when matches are found", async () => {
-		const redis = {
+		const redis = createRedisMock({
 			incrby: vi.fn(async () => 2),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		});
 		mockContainerGet.mockReturnValue(redis);
 
 		const checkSpy = vi
@@ -294,10 +279,9 @@ describe("totalScams", () => {
 	});
 
 	it("does not increment when no scam domains are found", async () => {
-		const redis = {
+		const redis = createRedisMock({
 			incrby: vi.fn(async () => 0),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		});
 		mockContainerGet.mockReturnValue(redis);
 
 		const checkSpy = vi.spyOn(checkScamModule, "checkScam").mockResolvedValue([]);

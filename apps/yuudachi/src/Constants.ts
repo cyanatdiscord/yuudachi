@@ -68,3 +68,17 @@ export const AUTOCOMPLETE_CASE_FOCUSED_FIELD_NAMES = ["case_reference", "referen
 export const AUTOCOMPLETE_REPORT_FOCUSED_FIELD_NAMES = ["report_reference", "reference_report", "report"];
 
 export const DISCORD_HOWTOREPORT = "https://discord.com/safety/360044103651-reporting-abusive-behavior-to-discord";
+
+// Fingerprint status enum
+export const enum FingerprintStatus {
+	Normal = 0,
+	Flagged = 1,
+	Trusted = 2,
+}
+
+// Auto-suggestion thresholds for suspicious fingerprints
+export const FINGERPRINT_SUSPICIOUS_GUILD_COUNT = 5;
+export const FINGERPRINT_SUSPICIOUS_OCCURRENCE_COUNT = 10;
+
+// Retention period for fingerprint occurrences (in days)
+export const FINGERPRINT_OCCURRENCE_RETENTION_DAYS = 30;

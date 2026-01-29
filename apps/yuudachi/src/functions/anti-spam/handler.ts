@@ -10,6 +10,7 @@ import {
 	SPAM_THRESHOLD,
 } from "../../Constants.js";
 import { type Case, CaseAction, createCase } from "../cases/createCase.js";
+import { recordFingerprint } from "../fingerprints/recordFingerprint.js";
 import { generateSpamGuildLogEmbed } from "../logging/generateSpamGuildLogEmbed.js";
 import { upsertCaseLog } from "../logging/upsertCaseLog.js";
 import { checkLogChannel } from "../settings/checkLogChannel.js";
@@ -66,6 +67,20 @@ export async function handleAntiSpam(
 		mediaAttachments.length && totalAttachmentCount < ATTACHMENT_SPAM_THRESHOLD
 			? await totalAttachmentDuplicates(guildId, userId, mediaAttachments)
 			: { maxDuplicateCount: 0, attachmentHashes: [] as string[] };
+
+	// Record fingerprints to database (fire and forget)
+	for (const [index, hash] of duplicateResult.attachmentHashes.entries()) {
+		const attachment = mediaAttachments[index];
+		void recordFingerprint({
+			hash,
+			guildId,
+			userId,
+			channelId,
+			fileSize: attachment?.size ?? null,
+			contentType: attachment?.contentType ?? null,
+			filename: attachment?.name ?? null,
+		});
+	}
 
 	const mentionExceeded = totalMentionCount >= MENTION_THRESHOLD;
 	const contentExceeded = totalContentCount >= SPAM_THRESHOLD;

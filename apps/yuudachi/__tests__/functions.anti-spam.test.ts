@@ -17,13 +17,7 @@ import {
 import { createContentHash, normalizeContentForHash, totalContents } from "../src/functions/anti-spam/totalContents.js";
 import { totalInteractionMessages } from "../src/functions/anti-spam/totalInteractions.js";
 import { totalMentions } from "../src/functions/anti-spam/totalMentions.js";
-import { mockContainerGet } from "./mocks.js";
-
-type RedisStub = {
-	expire?(key: string, seconds: number): Promise<number>;
-	incr?(key: string): Promise<number>;
-	incrby?(key: string, amount: number): Promise<number>;
-};
+import { createRedisMock, mockContainerGet } from "./mocks.js";
 
 describe("createContentHash", () => {
 	it("hashes content case-insensitively", () => {
@@ -54,10 +48,7 @@ describe("createContentHash", () => {
 
 describe("totalContents", () => {
 	it("increments content hash count and sets expiry", async () => {
-		const redis = {
-			incr: vi.fn(async () => 1),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		const redis = createRedisMock();
 		const guildId = "1" as Snowflake;
 		const userId = "2" as Snowflake;
 		const content = "Repeated message";
@@ -73,10 +64,7 @@ describe("totalContents", () => {
 
 describe("totalMentions", () => {
 	it("counts unique mentions and @everyone and sets expiry on first hit", async () => {
-		const redis = {
-			incrby: vi.fn(async (_key, amount: number) => amount),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		const redis = createRedisMock();
 		const guildId = "10" as Snowflake;
 		const userId = "20" as Snowflake;
 		const content = "Hello <@123456789012345678> and @everyone and <@!123456789012345678> `code <@456>`";
@@ -89,10 +77,10 @@ describe("totalMentions", () => {
 	});
 
 	it("does not reset expiry when counter already existed", async () => {
-		const redis = {
-			incrby: vi.fn(async (_key, amount: number) => amount + 4),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		// Simulate counter already having 4 hits - incrby returns new total (amount + 4)
+		const redis = createRedisMock({
+			incrby: vi.fn(async (_key: string, amount: number) => amount + 4),
+		});
 		const guildId = "10" as Snowflake;
 		const userId = "20" as Snowflake;
 		const content = "<@123456789012345678> world";
@@ -129,10 +117,9 @@ describe("normalizeAttachmentUrl", () => {
 
 describe("totalAttachmentUploads", () => {
 	it("increments media attachment count and sets expiry", async () => {
-		const redis = {
+		const redis = createRedisMock({
 			incrby: vi.fn(async () => 3),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		});
 		const guildId = "1" as Snowflake;
 		const userId = "2" as Snowflake;
 		const redisKey = `guild:${guildId}:user:${userId}:attachments`;
@@ -146,10 +133,7 @@ describe("totalAttachmentUploads", () => {
 
 describe("totalInteractionMessages", () => {
 	it("increments interaction message count and sets expiry", async () => {
-		const redis = {
-			incr: vi.fn(async () => 1),
-			expire: vi.fn(async () => 1),
-		} satisfies RedisStub;
+		const redis = createRedisMock();
 		const guildId = "1" as Snowflake;
 		const userId = "2" as Snowflake;
 		const redisKey = `guild:${guildId}:user:${userId}:interactions`;
@@ -178,15 +162,15 @@ describe("createAttachmentHash / totalAttachmentDuplicates", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		try {
+			// Use stateful incr to track duplicate counts per key
 			const counts = new Map<string, number>();
-			const redis = {
+			const redis = createRedisMock({
 				incr: vi.fn(async (key: string) => {
 					const next = (counts.get(key) ?? 0) + 1;
 					counts.set(key, next);
 					return next;
 				}),
-				expire: vi.fn(async () => 1),
-			} satisfies RedisStub;
+			});
 			mockContainerGet.mockReturnValue(redis);
 
 			const guildId = "1" as Snowflake;

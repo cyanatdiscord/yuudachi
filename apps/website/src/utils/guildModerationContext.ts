@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { getDiscordTokenOrRedirect } from "./discordAuth";
 
 export type PartialDiscordGuild = {
 	readonly id: string;
@@ -41,17 +41,6 @@ export function getDiscordGuildIconUrl(guild: PartialDiscordGuild, size: number)
 
 export function getGuildAcronym(name: string) {
 	return name.slice(0, 2).toUpperCase();
-}
-
-async function getDiscordTokenOrRedirect() {
-	const cookieStore = await cookies();
-	const token = cookieStore.get("discord_token");
-
-	if (!token) {
-		redirect("/login");
-	}
-
-	return token.value;
 }
 
 async function fetchDiscordGuilds(tokenValue: string) {

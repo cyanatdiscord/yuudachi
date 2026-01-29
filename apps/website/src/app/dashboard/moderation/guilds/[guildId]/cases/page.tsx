@@ -53,6 +53,19 @@ export default async function Page({
 
 	const { partialGuild, hasModRole } = await getGuildModerationContext(guildId);
 
+	if (!hasModRole) {
+		return (
+			<GuildAccessDenied
+				backHref={`/dashboard/moderation/guilds/${guildId}`}
+				description="This page is limited to members with the configured moderator role."
+				guildId={guildId}
+				guildName={partialGuild.name}
+				title="You don't have access to cases in this guild"
+				trail={[{ label: "Cases" }]}
+			/>
+		);
+	}
+
 	const guildIcon = getDiscordGuildIconUrl(partialGuild, 240);
 	const guildAcronym = getGuildAcronym(partialGuild.name);
 
@@ -67,19 +80,6 @@ export default async function Page({
 			page: nextPage,
 		});
 	};
-
-	if (!hasModRole) {
-		return (
-			<GuildAccessDenied
-				backHref={`/dashboard/moderation/guilds/${guildId}`}
-				description="This page is limited to members with the configured moderator role."
-				guildId={guildId}
-				guildName={partialGuild.name}
-				title="You don't have access to cases in this guild"
-				trail={[{ label: "Cases" }]}
-			/>
-		);
-	}
 
 	const casesUrl = new URL(`${process.env.BOT_API_URL}/api/guilds/${guildId}/cases`);
 	casesUrl.searchParams.set("page", String(page));

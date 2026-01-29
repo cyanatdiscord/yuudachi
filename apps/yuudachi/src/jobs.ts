@@ -5,6 +5,7 @@ import type { Redis } from "ioredis";
 import type { Sql } from "postgres";
 import { refreshScamDomains } from "./functions/anti-scam/refreshScamDomains.js";
 import { deleteCase } from "./functions/cases/deleteCase.js";
+import { pruneOccurrences } from "./functions/fingerprints/pruneOccurrences.js";
 import { deleteLockdown } from "./functions/lockdowns/deleteLockdown.js";
 import { upsertCaseLog } from "./functions/logging/upsertCaseLog.js";
 
@@ -58,6 +59,24 @@ export async function registerJobs() {
 			},
 			"Registered job: scamDomainUpdateTimers",
 		);
+
+		// Only enable fingerprint pruning if explicitly enabled via environment variable
+		// By default, we keep fingerprint occurrence data indefinitely for analysis
+		if (process.env.FINGERPRINT_PRUNING_ENABLED === "true") {
+			logger.info(
+				{
+					job: { name: "fingerprintPruneTimers" },
+				},
+				"Registering job: fingerprintPruneTimers",
+			);
+			await queue.add("fingerprintPruneTimers", {}, { repeat: { pattern: "0 3 * * *" } });
+			logger.info(
+				{
+					job: { name: "fingerprintPruneTimers" },
+				},
+				"Registered job: fingerprintPruneTimers",
+			);
+		}
 
 		new Worker(
 			"jobs",
@@ -114,6 +133,17 @@ export async function registerJobs() {
 					case "scamDomainUpdateTimers": {
 						try {
 							await refreshScamDomains();
+						} catch (error) {
+							const error_ = error as Error;
+							logger.error(error_, error_.message);
+						}
+
+						break;
+					}
+
+					case "fingerprintPruneTimers": {
+						try {
+							await pruneOccurrences();
 						} catch (error) {
 							const error_ = error as Error;
 							logger.error(error_, error_.message);

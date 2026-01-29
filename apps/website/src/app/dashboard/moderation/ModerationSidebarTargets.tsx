@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRightIcon, HomeIcon, InboxIcon, ShieldIcon, UsersIcon } from "lucide-react";
+import { ArrowUpRightIcon, FingerprintIcon, HomeIcon, InboxIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { SidebarItem, SidebarLabel, SidebarSection, SidebarSectionGroup } from "@/components/ui/Sidebar";
 
@@ -20,6 +20,10 @@ export function ModerationSidebarTargets() {
 					<UsersIcon data-slot="icon" />
 					<SidebarLabel>Guilds</SidebarLabel>
 				</SidebarItem>
+				<SidebarItem href="/dashboard/moderation/fingerprints" tooltip="Attachment fingerprints">
+					<FingerprintIcon data-slot="icon" />
+					<SidebarLabel>Fingerprints</SidebarLabel>
+				</SidebarItem>
 			</SidebarSection>
 
 			{guildId ? (
@@ -35,6 +39,10 @@ export function ModerationSidebarTargets() {
 					<SidebarItem href={`/dashboard/moderation/guilds/${guildId}/appeals`} tooltip="Appeals">
 						<UsersIcon data-slot="icon" />
 						<SidebarLabel>Appeals</SidebarLabel>
+					</SidebarItem>
+					<SidebarItem href={`/dashboard/moderation/guilds/${guildId}/fingerprints`} tooltip="Fingerprints">
+						<FingerprintIcon data-slot="icon" />
+						<SidebarLabel>Fingerprints</SidebarLabel>
 					</SidebarItem>
 					<SidebarItem
 						href={`https://discord.com/channels/${guildId}`}

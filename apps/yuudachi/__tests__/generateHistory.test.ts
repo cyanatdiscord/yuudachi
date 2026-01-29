@@ -10,7 +10,9 @@ import {
 	generateReportHistory,
 	HistoryType,
 } from "../src/util/generateHistory.js";
-import { createSqlMock, mockContainerGet, mockLogger } from "./mocks.js";
+import { createMockCase } from "./fixtures/cases.js";
+import { createMockReport } from "./fixtures/reports.js";
+import { createAdvancedSqlMock, createQueryHandler, mockContainerGet, mockLogger } from "./mocks.js";
 
 const getGuildSetting = vi.fn();
 vi.mock("../functions/settings/getGuildSetting.js", () => ({
@@ -34,49 +36,48 @@ const user = {
 
 const locale = "en-US";
 
-const sqlMock = createSqlMock<any>(async (strings?: TemplateStringsArray) => {
-	const query = strings?.[0] ?? "";
+// Mock case records for history tests
+const mockCases = [
+	createMockCase({
+		created_at: "2024-01-01T00:00:00.000Z",
+		action: CaseAction.Warn,
+		case_id: 1,
+		log_message_id: "log",
+		guild_id: interaction.guildId,
+		reason: "first reason",
+		target_id: user.id,
+	}),
+	createMockCase({
+		created_at: "2024-02-01T00:00:00.000Z",
+		action: CaseAction.Ban,
+		case_id: 2,
+		log_message_id: null,
+		guild_id: interaction.guildId,
+		reason: "second reason",
+		target_id: user.id,
+	}),
+];
 
-	if (query.includes("from cases")) {
-		return [
-			{
-				created_at: "2024-01-01T00:00:00.000Z",
-				action: CaseAction.Warn,
-				case_id: 1,
-				log_message_id: "log",
-				guild_id: interaction.guildId,
-				reason: "first reason",
-				target_id: user.id,
-			},
-			{
-				created_at: "2024-02-01T00:00:00.000Z",
-				action: CaseAction.Ban,
-				case_id: 2,
-				log_message_id: null,
-				guild_id: interaction.guildId,
-				reason: "second reason",
-				target_id: user.id,
-			},
-		];
-	}
+// Mock report records for history tests
+const mockReports = [
+	createMockReport({
+		created_at: "2024-03-01T00:00:00.000Z",
+		report_id: 10,
+		log_post_id: "channel",
+		guild_id: interaction.guildId,
+		status: ReportStatus.Approved,
+		author_id: user.id,
+		target_id: user.id,
+		reason: "report reason",
+	}),
+];
 
-	if (query.includes("from reports")) {
-		return [
-			{
-				created_at: "2024-03-01T00:00:00.000Z",
-				report_id: 10,
-				log_post_id: "channel",
-				guild_id: interaction.guildId,
-				status: ReportStatus.Approved,
-				author_id: user.id,
-				target_id: user.id,
-				reason: "report reason",
-			},
-		];
-	}
+const sqlResponses = new Map<string, unknown[]>([
+	["from cases", mockCases],
+	["from reports", mockReports],
+]);
 
-	return [];
-}, "123");
+const { mock: sqlMock } = createAdvancedSqlMock(createQueryHandler(sqlResponses));
 
 beforeEach(() => {
 	getGuildSetting.mockResolvedValue("123");

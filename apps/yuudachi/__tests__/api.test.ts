@@ -1,69 +1,43 @@
 import { kSQL } from "@yuudachi/framework";
 import { Client } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { CaseAction } from "../src/functions/cases/createCase.js";
 import type * as ApiModule from "../src/util/api.js";
-import { createSqlMock, mockContainerGet } from "./mocks.js";
+import { createMockAppeal, createMockCase, mockCaseListEntry, mockAppealListEntry } from "./fixtures/cases.js";
+import { createMockClient, createMockGuildStub, mockChannel, mockRole } from "./fixtures/discord.js";
+import { createAdvancedSqlMock, mockContainerGet } from "./mocks.js";
 
-const insertedAppeal = {
+const insertedAppeal = createMockAppeal({
 	appeal_id: 2,
 	created_at: "2024-02-01T00:00:00.000Z",
 	guild_id: "guild",
-	mod_id: null,
-	mod_tag: null,
 	reason: "reason",
-	ref_id: null,
-	status: 0,
-	target_id: "target",
-	target_tag: "target#0001",
-	updated_at: null,
-};
+});
 
 let api!: typeof ApiModule.api;
 
 const createAppeal = vi.fn(async (input) => ({ id: "appeal-id", ...input }));
 vi.mock("../functions/appeals/createAppeal.js", () => ({ createAppeal }));
 
-const rolesList = [{ id: "role-id", name: "Moderators" }];
-const channelsList = [{ id: "channel-id", name: "general", type: 0 }];
+const rolesList = [mockRole];
+const channelsList = [mockChannel];
 
-const bansFetch = vi.fn();
-const guildStub = {
-	bans: { fetch: bansFetch },
-	roles: { cache: new Map(rolesList.map((role) => [role.id, role])) },
-	channels: {
-		cache: new Map(channelsList.map((channel) => [channel.id, channel])),
-	},
-};
+const guildStub = createMockGuildStub({ roles: rolesList, channels: channelsList });
+const bansFetch = guildStub.bans.fetch;
 const usersFetch = vi.fn(async (id: string) => ({ id, tag: `user#${id}` }));
-const client = {
-	guilds: { cache: new Map([["222078108977594368", guildStub]]) },
-	users: { fetch: usersFetch },
-} as unknown as Client<true>;
+const client = createMockClient({
+	guilds: new Map([["222078108977594368", guildStub]]),
+	usersFetch,
+}) as unknown as Client<true>;
 
-const caseRecord = {
-	case_id: 1,
-	guild_id: "222078108977594368",
-	target_id: "user-id",
-	action: CaseAction.Ban,
-	mod_id: "mod-id",
-	created_at: "2024-01-01T00:00:00.000Z",
-};
-
-const casesList = [{ target_id: "target", target_tag: "target#0001", cases_count: 2 }];
+const caseRecord = createMockCase();
+const casesList = [mockCaseListEntry];
 const targetsCount = casesList.length;
-const appealsList = [
-	{
-		appeal_id: "1",
-		guild_id: "222078108977594368",
-		created_at: "2024-01-01T00:00:00.000Z",
-		reason: "appeal",
-	},
-];
+const appealsList = [mockAppealListEntry];
 
-const sqlMock = createSqlMock<any>(async (strings?: TemplateStringsArray) => {
-	const query = strings?.join("") ?? "";
-
+// SQL handler for complex API route queries
+// Uses handler-based approach for order-dependent pattern matching
+const { mock: sqlMock } = createAdvancedSqlMock((query: string) => {
+	// Cases - check more specific patterns first
 	if (query.includes("from cases") && query.includes("limit 1")) {
 		return [caseRecord];
 	}
@@ -84,6 +58,7 @@ const sqlMock = createSqlMock<any>(async (strings?: TemplateStringsArray) => {
 		return [caseRecord];
 	}
 
+	// Appeals
 	if (query.includes("from appeals") && query.includes("appeals_count")) {
 		return appealsList;
 	}

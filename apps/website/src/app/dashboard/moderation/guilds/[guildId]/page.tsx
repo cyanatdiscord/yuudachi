@@ -71,6 +71,17 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 	const { partialGuild, member, guildSettings, modRoleId, memberRoleIds, hasModRole } =
 		await getGuildModerationContext(guildId);
 
+	if (!hasModRole) {
+		return (
+			<GuildAccessDenied
+				description="This dashboard is limited to members with the configured moderator role."
+				guildId={guildId}
+				guildName={partialGuild.name}
+				title="You don't have access to this guild"
+			/>
+		);
+	}
+
 	const guildData = await fetch(`https://bot.yuudachi.dev/api/guilds/222078108977594368`, {
 		headers: {
 			Authorization: `Bearer ${process.env.JWT_TOKEN}`,
@@ -82,17 +93,6 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 	}
 
 	const guild = (await guildData.json()) as BotGuild;
-
-	if (!hasModRole) {
-		return (
-			<GuildAccessDenied
-				description="This dashboard is limited to members with the configured moderator role."
-				guildId={guildId}
-				guildName={partialGuild.name}
-				title="You don't have access to this guild"
-			/>
-		);
-	}
 
 	const [rolesData, channelsData] = await Promise.all([
 		fetch(`${process.env.BOT_API_URL}/api/guilds/${guildId}/roles`, {
