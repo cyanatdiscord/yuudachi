@@ -256,24 +256,24 @@ describe("formatMessageToEmbed", () => {
 	});
 });
 
+const createMockMember = () =>
+	({
+		user: {
+			tag: "SpamUser#0001",
+			id: "123456789",
+			displayAvatarURL: () => "https://avatar.url/spam.png",
+		},
+	}) as any;
+
+const createMockCase = (caseId = 42) =>
+	({
+		caseId,
+		guildId: "987654321",
+		action: 1,
+		createdAt: "2024-01-01",
+	}) as any;
+
 describe("generateSpamGuildLogEmbed", () => {
-	const createMockMember = () =>
-		({
-			user: {
-				tag: "SpamUser#0001",
-				id: "123456789",
-				displayAvatarURL: () => "https://avatar.url/spam.png",
-			},
-		}) as any;
-
-	const createMockCase = (caseId = 42) =>
-		({
-			caseId,
-			guildId: "987654321",
-			action: 1,
-			createdAt: "2024-01-01",
-		}) as any;
-
 	it("should build mention spam embed with correct structure", () => {
 		const member = createMockMember();
 		const case_ = createMockCase();
