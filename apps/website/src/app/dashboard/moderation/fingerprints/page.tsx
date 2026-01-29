@@ -16,10 +16,10 @@ import { convertDataRateLogBinary } from "@/utils/format";
 import { fingerprintsSearchParamsCache, serializeFingerprintsSearchParams } from "./searchParams";
 
 export default async function Page({ searchParams }: { readonly searchParams?: Promise<SearchParams> }) {
-	const { hasAccess, user } = await checkFingerprintAccess();
+	const { hasAccess } = await checkFingerprintAccess();
 
 	if (!hasAccess) {
-		return <FingerprintAccessDenied username={user.global_name ?? user.username} />;
+		return <FingerprintAccessDenied />;
 	}
 
 	const parsedSearchParams = await fingerprintsSearchParamsCache.parse(searchParams ?? Promise.resolve({}));
@@ -245,7 +245,7 @@ export default async function Page({ searchParams }: { readonly searchParams?: P
 						</p>
 					</div>
 
-					{fingerprints.length > 0 ? (
+					{fingerprints.length ? (
 						<div className="grid gap-3 md:grid-cols-2">
 							{fingerprints.map((fp: Fingerprint) => {
 								const suspicious = isSuspiciousFingerprint(

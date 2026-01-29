@@ -82,7 +82,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 		);
 	}
 
-	const guildData = await fetch(`https://bot.yuudachi.dev/api/guilds/222078108977594368`, {
+	const guildData = await fetch(`${process.env.BOT_API_URL}/api/guilds/${guildId}`, {
 		headers: {
 			Authorization: `Bearer ${process.env.JWT_TOKEN}`,
 		},
@@ -441,7 +441,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 													<Icon aria-hidden className="size-5" />
 												</div>
 												<div className="flex flex-1 flex-col gap-1">
-													<span className="text-base-xs font-semibold tracking-wide text-base-neutral-500 uppercase">
+													<span className="text-base-xs font-semibold tracking-wide text-base-neutral-500 uppercase dark:text-base-neutral-400">
 														{stat.label}
 													</span>
 													<span className="text-2xl font-semibold">{formatNumber(stat.value)}</span>
@@ -458,7 +458,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 							<div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
 								<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 									<div className="flex place-items-center gap-2">
-										<ActivityIcon aria-hidden className="size-4 text-base-neutral-500" />
+										<ActivityIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 										<h2 className="text-base-label-lg font-semibold">Guild snapshot</h2>
 									</div>
 									<div className="pt-4">
@@ -469,7 +469,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 								<div className="flex flex-col gap-6">
 									<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 										<div className="flex place-items-center gap-2">
-											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500" />
+											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 											<h2 className="text-base-label-lg font-semibold">Quick checks</h2>
 										</div>
 										<div className="grid gap-3 pt-4 text-base-sm">
@@ -500,11 +500,11 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 
 									<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 										<div className="flex place-items-center gap-2">
-											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500" />
+											<ShieldIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 											<h2 className="text-base-label-lg font-semibold">Features</h2>
 										</div>
 										<div className="pt-4">
-											{(guild.features?.length ?? 0) > 0 ? (
+											{guild.features?.length ? (
 												<div className="flex flex-wrap gap-2">
 													{(guild.features ?? []).slice(0, 12).map((feature) => (
 														<span
@@ -536,7 +536,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 						<div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
 							<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 								<div className="flex place-items-center gap-2">
-									<ShieldIcon aria-hidden className="size-4 text-base-neutral-500" />
+									<ShieldIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 									<h2 className="text-base-label-lg font-semibold">Moderation settings</h2>
 								</div>
 								<div className="pt-4">
@@ -547,7 +547,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 							<div className="flex flex-col gap-6">
 								<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 									<div className="flex place-items-center gap-2">
-										<SparklesIcon aria-hidden className="size-4 text-base-neutral-500" />
+										<SparklesIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 										<h2 className="text-base-label-lg font-semibold">Tips</h2>
 									</div>
 									<ul className="list-disc space-y-2 pt-4 pl-5 text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
@@ -591,7 +591,7 @@ export default async function Page({ params }: { readonly params: Promise<{ guil
 
 							<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-6 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 								<div className="flex place-items-center gap-2">
-									<UsersIcon aria-hidden className="size-4 text-base-neutral-500" />
+									<UsersIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 									<h2 className="text-base-label-lg font-semibold">Your access</h2>
 								</div>
 								<div className="pt-4">

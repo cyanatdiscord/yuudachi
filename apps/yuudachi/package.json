@@ -29,7 +29,9 @@
 		"start:dev": "npm run build && npm run dev",
 		"dev": "env-cmd --silent node --enable-source-maps dist/index.js",
 		"deploy:commands": "env-cmd --silent node --enable-source-maps dist/deploy.js",
-		"migrate": "env-cmd --silent ley"
+		"migrate": "env-cmd --silent ley",
+		"db:seed:fingerprints": "env-cmd --silent node --enable-source-maps dist/scripts/seedFingerprints.js",
+		"db:truncate:fingerprints": "env-cmd --silent node --enable-source-maps dist/scripts/truncateFingerprints.js"
 	},
 	"dependencies": {
 		"@aero/sanitizer": "^1.3.2",

@@ -6,12 +6,12 @@ import { FingerprintStatusBadge } from "@/components/FingerprintStatusBadge";
 import { BreadcrumbItem, Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Link } from "@/components/ui/Link";
 import { Separator } from "@/components/ui/Separator";
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/ui/Table";
 import { buttonStyles } from "@/styles/ui/button";
 import type { FingerprintStats, FingerprintWithRelations } from "@/types/fingerprints";
 import { checkFingerprintAccess } from "@/utils/fingerprintAccess";
 import { FINGERPRINT_STATUS_FLAGGED, FINGERPRINT_STATUS_TRUSTED, isSuspiciousFingerprint } from "@/utils/fingerprints";
 import { convertDataRateLogBinary } from "@/utils/format";
+import { GuildBreakdownTable } from "./GuildBreakdownTable";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
 	year: "numeric",
@@ -33,10 +33,10 @@ function getStatusLabel(status: number) {
 }
 
 export default async function Page({ params }: { readonly params: Promise<{ hash: string }> }) {
-	const { hasAccess, user } = await checkFingerprintAccess();
+	const { hasAccess } = await checkFingerprintAccess();
 
 	if (!hasAccess) {
-		return <FingerprintAccessDenied username={user.global_name ?? user.username} />;
+		return <FingerprintAccessDenied />;
 	}
 
 	const { hash } = await params;
@@ -94,7 +94,7 @@ export default async function Page({ params }: { readonly params: Promise<{ hash
 				<Breadcrumbs>
 					<BreadcrumbItem href="/dashboard/moderation">Moderation</BreadcrumbItem>
 					<BreadcrumbItem href="/dashboard/moderation/fingerprints">Fingerprints</BreadcrumbItem>
-					<BreadcrumbItem>{hash.slice(0, 12)}…</BreadcrumbItem>
+					<BreadcrumbItem>{hash.slice(0, 16)}…</BreadcrumbItem>
 				</Breadcrumbs>
 
 				<div className="flex flex-col gap-4 lg:flex-row lg:place-content-between lg:place-items-start">
@@ -105,7 +105,7 @@ export default async function Page({ params }: { readonly params: Promise<{ hash
 
 						<div className="flex flex-col gap-2">
 							<div className="flex flex-wrap items-center gap-3">
-								<h1 className="font-mono text-xl font-semibold tracking-tight">{hash.slice(0, 16)}…</h1>
+								<h1 className="font-mono text-xl font-semibold tracking-tight">{hash.slice(0, 16)}...</h1>
 								<FingerprintStatusBadge isSuspicious={suspicious} size="md" status={fp.status} />
 							</div>
 							<p className="font-mono text-base-xs break-all text-base-neutral-600 dark:text-base-neutral-300">
@@ -168,7 +168,7 @@ export default async function Page({ params }: { readonly params: Promise<{ hash
 							<div>
 								<p className="text-base-xs text-base-neutral-600 dark:text-base-neutral-300">Last seen</p>
 								<p className="text-base-sm font-medium">{dateTimeFormatter.format(new Date(fp.lastSeenAt))}</p>
-								<p className="text-base-xs text-base-neutral-500">
+								<p className="text-base-xs text-base-neutral-500 dark:text-base-neutral-400">
 									{format(Date.now() - new Date(fp.lastSeenAt).getTime(), true)} ago
 								</p>
 							</div>
@@ -247,40 +247,15 @@ export default async function Page({ params }: { readonly params: Promise<{ hash
 				</div>
 
 				{/* Guild breakdown */}
-				{fp.guilds && fp.guilds.length > 0 ? (
+				{fp.guilds?.length ? (
 					<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-4 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 						<h2 className="pb-4 text-base-label-lg">Guild breakdown</h2>
-						<Table aria-label="Guild breakdown" className="text-base-sm">
-							<TableHeader>
-								<TableColumn className="text-left" isRowHeader>
-									Guild ID
-								</TableColumn>
-								<TableColumn className="text-right">Occurrences</TableColumn>
-								<TableColumn className="text-right">Users</TableColumn>
-								<TableColumn className="text-right">First seen</TableColumn>
-								<TableColumn className="text-right">Last seen</TableColumn>
-							</TableHeader>
-							<TableBody items={fp.guilds}>
-								{(item) => (
-									<TableRow id={item.guildId}>
-										<TableCell className="font-mono">{item.guildId}</TableCell>
-										<TableCell className="text-right">{numberFormatter.format(item.occurrenceCount)}</TableCell>
-										<TableCell className="text-right">{numberFormatter.format(item.userCount)}</TableCell>
-										<TableCell className="text-right text-base-neutral-600 dark:text-base-neutral-300">
-											{format(Date.now() - new Date(item.firstSeenAt).getTime(), true)} ago
-										</TableCell>
-										<TableCell className="text-right text-base-neutral-600 dark:text-base-neutral-300">
-											{format(Date.now() - new Date(item.lastSeenAt).getTime(), true)} ago
-										</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
+						<GuildBreakdownTable items={fp.guilds} />
 					</div>
 				) : null}
 
 				{/* Recent occurrences */}
-				{fp.occurrences && fp.occurrences.length > 0 ? (
+				{fp.occurrences?.length ? (
 					<div className="rounded border border-base-neutral-200 bg-base-neutral-0 p-4 dark:border-base-neutral-700 dark:bg-base-neutral-800">
 						<h2 className="pb-4 text-base-label-lg">Recent occurrences</h2>
 						<div className="space-y-3">
@@ -290,14 +265,14 @@ export default async function Page({ params }: { readonly params: Promise<{ hash
 									className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-base-neutral-100 pb-3 last:border-b-0 last:pb-0 dark:border-base-neutral-800"
 								>
 									<div className="flex items-center gap-2">
-										<UsersIcon aria-hidden className="size-4 text-base-neutral-500" />
+										<UsersIcon aria-hidden className="size-4 text-base-neutral-500 dark:text-base-neutral-400" />
 										<span className="font-mono text-base-xs">{occ.userId}</span>
 									</div>
-									<span className="text-base-xs text-base-neutral-500">in</span>
+									<span className="text-base-xs text-base-neutral-500 dark:text-base-neutral-400">in</span>
 									<span className="font-mono text-base-xs">{occ.guildId}</span>
 									{occ.channelId ? (
 										<>
-											<span className="text-base-xs text-base-neutral-500">#</span>
+											<span className="text-base-xs text-base-neutral-500 dark:text-base-neutral-400">#</span>
 											<span className="font-mono text-base-xs">{occ.channelId}</span>
 										</>
 									) : null}
@@ -306,7 +281,7 @@ export default async function Page({ params }: { readonly params: Promise<{ hash
 											Case #{occ.caseId}
 										</span>
 									) : null}
-									<span className="ml-auto text-base-xs text-base-neutral-500">
+									<span className="ml-auto text-base-xs text-base-neutral-500 dark:text-base-neutral-400">
 										{format(Date.now() - new Date(occ.createdAt).getTime(), true)} ago
 									</span>
 								</div>

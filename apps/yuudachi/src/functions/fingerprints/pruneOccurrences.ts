@@ -20,7 +20,7 @@ export async function pruneOccurrences(): Promise<number> {
 
 	const deletedCount = Number.parseInt(result.count, 10);
 
-	if (deletedCount > 0) {
+	if (deletedCount) {
 		logger.info(
 			{ job: { name: "pruneFingerprints" }, deletedCount, retentionDays: FINGERPRINT_OCCURRENCE_RETENTION_DAYS },
 			`Pruned ${deletedCount} old fingerprint occurrences`,

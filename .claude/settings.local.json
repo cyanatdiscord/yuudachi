@@ -1,6 +1,14 @@
 {
 	"permissions": {
-		"allow": ["Bash(find:*)", "Bash(grep:*)", "Bash(findstr:*)", "Bash(wc:*)", "Bash(ls:*)", "Bash(xxd:*)"]
+		"allow": [
+			"Bash(find:*)",
+			"Bash(grep:*)",
+			"Bash(findstr:*)",
+			"Bash(wc:*)",
+			"Bash(ls:*)",
+			"Bash(xxd:*)",
+			"Bash(dir:*)"
+		]
 	},
 	"outputStyle": "Explanatory",
 	"plansDirectory": ".claude/plans"

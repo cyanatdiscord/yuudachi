@@ -3,7 +3,7 @@ import { BreadcrumbItem, Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Link } from "@/components/ui/Link";
 import { buttonStyles } from "@/styles/ui/button";
 
-export function FingerprintAccessDenied({ username }: { readonly username?: string | null }) {
+export function FingerprintAccessDenied() {
 	return (
 		<div className="mx-auto w-full max-w-6xl px-6 pb-10">
 			<div className="flex flex-col gap-6 py-6">
@@ -16,16 +16,9 @@ export function FingerprintAccessDenied({ username }: { readonly username?: stri
 					<div className="flex place-items-start gap-3">
 						<LockIcon aria-hidden className="mt-0.5 size-5 text-base-neutral-600 dark:text-base-neutral-300" />
 						<div className="flex flex-col gap-1">
-							<p className="text-base-label-lg">Access restricted</p>
+							<p className="text-base-label-lg">You don't have access to global fingerprint data</p>
 							<p className="text-base-sm text-base-neutral-600 dark:text-base-neutral-300">
-								{username ? (
-									<>
-										<span className="font-medium">{username}</span>, you don't have access to global fingerprint data.
-									</>
-								) : (
-									"You don't have access to global fingerprint data."
-								)}{" "}
-								This feature is limited to authorized moderators.
+								This page is limited to authorized users.
 							</p>
 						</div>
 					</div>

@@ -327,7 +327,7 @@ export default async function Page({
 											<div className="min-w-0 grow">
 												<div className="flex flex-wrap place-content-between place-items-start gap-2">
 													<div className="min-w-0">
-														<p className="truncate font-mono text-base-sm">{fp.hash.slice(0, 16)}…</p>
+														<p className="truncate font-mono text-base-sm">{fp.hash}</p>
 														<div className="flex flex-wrap gap-2 pt-1">
 															<FingerprintStatusBadge isSuspicious={suspicious} status={fp.status} />
 															<span className="text-base-xs text-base-neutral-600 dark:text-base-neutral-300">
