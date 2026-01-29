@@ -14,6 +14,10 @@ export type RecordFingerprintOptions = {
 	userId?: Snowflake | null | undefined;
 };
 
+export type RecordFingerprintResult = {
+	readonly inserted: boolean;
+};
+
 /**
  * Records a fingerprint occurrence to the database.
  * This function is designed to be called in a fire-and-forget manner.
@@ -26,8 +30,10 @@ export type RecordFingerprintOptions = {
  * Uses PostgreSQL's xmax system column to detect whether an upsert was an INSERT or UPDATE:
  * - xmax = 0 means the row was newly inserted
  * - xmax > 0 means the row was updated (conflict occurred)
+ *
+ * @returns Object with `inserted: true` if this was a new fingerprint, `false` if updated
  */
-export async function recordFingerprint(options: RecordFingerprintOptions): Promise<void> {
+export async function recordFingerprint(options: RecordFingerprintOptions): Promise<RecordFingerprintResult> {
 	const sql = container.get<Sql<any>>(kSQL);
 
 	const { hash, guildId, userId, channelId, messageId, caseId, fileSize, contentType, filename } = options;
@@ -146,8 +152,10 @@ export async function recordFingerprint(options: RecordFingerprintOptions): Prom
 				)
 			`;
 		}
+		return { inserted: isNewFingerprint };
 	} catch (error) {
 		const error_ = error as Error;
 		logger.error({ error: error_, hash, guildId, userId }, "Failed to record fingerprint");
+		return { inserted: false };
 	}
 }

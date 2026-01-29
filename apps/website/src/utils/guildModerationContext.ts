@@ -78,6 +78,7 @@ async function fetchGuildSettings(guildId: string) {
 		headers: {
 			Authorization: `Bearer ${process.env.JWT_TOKEN}`,
 		},
+		next: { revalidate: 300 },
 	});
 
 	if (guildSettingsData.status !== 200) {

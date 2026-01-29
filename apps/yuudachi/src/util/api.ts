@@ -352,19 +352,14 @@ export const api = fastify({ trustProxy: true })
 					}
 				}
 
-				const sql = container.get<Sql<any>>(kSQL);
 				let created = 0;
 				let updated = 0;
 				const hashes: string[] = [];
 
 				for (const fp of fingerprints) {
-					// Check if fingerprint exists
-					const [existing] = await sql<[{ hash: string }?]>`
-						select hash from attachment_fingerprints where hash = ${fp.hash}
-					`;
-
-					// Record the fingerprint
-					await recordFingerprint({
+					// Record the fingerprint - returns whether it was a new insert or update
+					// This uses PostgreSQL's xmax trick internally to detect insert vs update
+					const result = await recordFingerprint({
 						hash: fp.hash,
 						guildId: fp.guild_id ?? null,
 						userId: fp.user_id ?? null,
@@ -384,10 +379,10 @@ export const api = fastify({ trustProxy: true })
 						});
 					}
 
-					if (existing) {
-						updated++;
-					} else {
+					if (result.inserted) {
 						created++;
+					} else {
+						updated++;
 					}
 
 					hashes.push(fp.hash);

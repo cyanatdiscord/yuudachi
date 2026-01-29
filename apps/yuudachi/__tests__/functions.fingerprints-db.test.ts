@@ -30,10 +30,8 @@ describe("listFingerprints", () => {
 	});
 
 	it("uses default pagination values (page 1, limit 50)", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "0" }]],
-			["select f.*", []],
-		]);
+		// New query uses window function: select f.*, count(*) over() as total_count
+		const responses = new Map<string, unknown[]>([["count(*) over()", []]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -44,10 +42,7 @@ describe("listFingerprints", () => {
 	});
 
 	it("clamps page to minimum of 1", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "0" }]],
-			["select f.*", []],
-		]);
+		const responses = new Map<string, unknown[]>([["count(*) over()", []]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -57,10 +52,7 @@ describe("listFingerprints", () => {
 	});
 
 	it("clamps limit to range 1-100", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "0" }]],
-			["select f.*", []],
-		]);
+		const responses = new Map<string, unknown[]>([["count(*) over()", []]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -78,10 +70,7 @@ describe("listFingerprints", () => {
 	});
 
 	it("calculates offset correctly as (page-1)*limit", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "100" }]],
-			["select f.*", []],
-		]);
+		const responses = new Map<string, unknown[]>([["count(*) over()", []]]);
 		const { mock, calls } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -93,10 +82,9 @@ describe("listFingerprints", () => {
 	});
 
 	it("returns transformed fingerprints", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "1" }]],
-			["select f.*", [mockRawFingerprint]],
-		]);
+		// Window function returns total_count with each row
+		const fingerprintWithCount = { ...mockRawFingerprint, total_count: 1 };
+		const responses = new Map<string, unknown[]>([["count(*) over()", [fingerprintWithCount]]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -108,10 +96,8 @@ describe("listFingerprints", () => {
 	});
 
 	it("filters by status when provided", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "1" }]],
-			["select f.*", [mockRawFingerprintFlagged]],
-		]);
+		const fingerprintWithCount = { ...mockRawFingerprintFlagged, total_count: 1 };
+		const responses = new Map<string, unknown[]>([["count(*) over()", [fingerprintWithCount]]]);
 		const { mock, calls } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -123,47 +109,54 @@ describe("listFingerprints", () => {
 	});
 
 	it("applies suspicious filter with correct thresholds", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "5" }]],
-			["select f.*", []],
-		]);
+		const responses = new Map<string, unknown[]>([["count(*) over()", []]]);
 		const { mock, calls, unsafeCalls } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
 		await listFingerprints({ suspicious: true });
 
 		// Should filter by Normal status and guild_count/occurrence_count thresholds
-		const allCalls = [...calls.map((c) => c.strings.join("")), ...unsafeCalls.map((c) => c.query)].join(" ");
+		const allCalls = [...calls.map((call) => call.strings.join("")), ...unsafeCalls.map((call) => call.query)].join(
+			" ",
+		);
 		expect(allCalls).toContain("guild_count");
 		expect(allCalls).toContain("occurrence_count");
 	});
 
 	it("filters by guildId when provided", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "3" }]],
-			["select f.*", [mockRawFingerprint]],
-		]);
+		const fingerprintWithCount = { ...mockRawFingerprint, total_count: 3 };
+		const responses = new Map<string, unknown[]>([["count(*) over()", [fingerprintWithCount]]]);
 		const { mock, calls, unsafeCalls } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
 		await listFingerprints({ guildId: "123456789" as Snowflake });
 
 		// Should join with fingerprint_guilds table
-		const allCalls = [...calls.map((c) => c.strings.join("")), ...unsafeCalls.map((c) => c.query)].join(" ");
+		const allCalls = [...calls.map((call) => call.strings.join("")), ...unsafeCalls.map((call) => call.query)].join(
+			" ",
+		);
 		expect(allCalls).toContain("fingerprint_guilds");
 	});
 
 	it("returns correct total count", async () => {
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [{ count: "42" }]],
-			["select f.*", []],
-		]);
+		// Window function returns total_count with each row
+		// Empty result means total is 0
+		const responses = new Map<string, unknown[]>([["count(*) over()", []]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
 		const result = await listFingerprints();
 
-		expect(result.total).toBe(42);
+		expect(result.total).toBe(0);
+
+		// Test with data - total comes from the total_count column
+		const fingerprintWithCount = { ...mockRawFingerprint, total_count: 42 };
+		const responses2 = new Map<string, unknown[]>([["count(*) over()", [fingerprintWithCount]]]);
+		const { mock: mock2 } = createAdvancedSqlMock(createQueryHandler(responses2));
+		mockContainerGet.mockReturnValue(mock2);
+
+		const result2 = await listFingerprints();
+		expect(result2.total).toBe(42);
 	});
 });
 
@@ -229,7 +222,7 @@ describe("getFingerprint", () => {
 		expect(result?.users).toHaveLength(1);
 
 		// Verify limit 100 is applied
-		const userQuery = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_users"));
+		const userQuery = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_users"));
 		expect(userQuery?.strings.join("")).toContain("limit");
 	});
 
@@ -265,7 +258,7 @@ describe("getFingerprint", () => {
 		});
 
 		// Default limit should be 50
-		const occurrenceQuery = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_occurrences"));
+		const occurrenceQuery = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_occurrences"));
 		expect(occurrenceQuery?.values).toContain(50);
 	});
 
@@ -283,7 +276,7 @@ describe("getFingerprint", () => {
 			includeOccurrences: true,
 		});
 
-		const occurrenceQuery = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_occurrences"));
+		const occurrenceQuery = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_occurrences"));
 		expect(occurrenceQuery?.strings.join("")).toContain("guild_id");
 	});
 });
@@ -302,7 +295,7 @@ describe("recordFingerprint", () => {
 
 		await recordFingerprint({ hash: "testhash123" });
 
-		const insertCall = calls.find((c) => c.strings.join("").includes("insert into attachment_fingerprints"));
+		const insertCall = calls.find((call) => call.strings.join("").includes("insert into attachment_fingerprints"));
 		expect(insertCall).toBeDefined();
 		expect(insertCall?.strings.join("")).toContain("on conflict");
 		expect(insertCall?.strings.join("")).toContain("occurrence_count");
@@ -323,7 +316,7 @@ describe("recordFingerprint", () => {
 			guildId: "123456789" as Snowflake,
 		});
 
-		const guildInsert = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_guilds"));
+		const guildInsert = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_guilds"));
 		expect(guildInsert).toBeDefined();
 	});
 
@@ -344,8 +337,9 @@ describe("recordFingerprint", () => {
 
 		// Should NOT have a separate update to increment guild_count
 		const guildCountUpdate = calls.find(
-			(c) =>
-				c.strings.join("").includes("update attachment_fingerprints") && c.strings.join("").includes("guild_count"),
+			(call) =>
+				call.strings.join("").includes("update attachment_fingerprints") &&
+				call.strings.join("").includes("guild_count"),
 		);
 		expect(guildCountUpdate).toBeUndefined();
 	});
@@ -367,8 +361,9 @@ describe("recordFingerprint", () => {
 
 		// Should have an update to increment guild_count
 		const guildCountUpdate = calls.find(
-			(c) =>
-				c.strings.join("").includes("update attachment_fingerprints") && c.strings.join("").includes("guild_count"),
+			(call) =>
+				call.strings.join("").includes("update attachment_fingerprints") &&
+				call.strings.join("").includes("guild_count"),
 		);
 		expect(guildCountUpdate).toBeDefined();
 	});
@@ -387,7 +382,7 @@ describe("recordFingerprint", () => {
 			userId: "987654321" as Snowflake,
 		});
 
-		const userInsert = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_users"));
+		const userInsert = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_users"));
 		expect(userInsert).toBeDefined();
 	});
 
@@ -412,10 +407,10 @@ describe("recordFingerprint", () => {
 			messageId: "444555666" as Snowflake,
 		});
 
-		const occurrenceInsert = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_occurrences"));
+		const occurrenceInsert = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_occurrences"));
 		expect(occurrenceInsert).toBeDefined();
 
-		const guildUserInsert = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_guild_users"));
+		const guildUserInsert = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_guild_users"));
 		expect(guildUserInsert).toBeDefined();
 	});
 
@@ -426,8 +421,8 @@ describe("recordFingerprint", () => {
 		errorMock.unsafe = vi.fn();
 		mockContainerGet.mockReturnValue(errorMock);
 
-		// Should not throw
-		await expect(recordFingerprint({ hash: "testhash123" })).resolves.toBeUndefined();
+		// Should not throw, returns { inserted: false } on error
+		await expect(recordFingerprint({ hash: "testhash123" })).resolves.toEqual({ inserted: false });
 
 		expect(mockLogger.error).toHaveBeenCalled();
 	});
@@ -474,7 +469,7 @@ describe("flagFingerprint", () => {
 
 		expect(result?.status).toBe(FingerprintStatus.Flagged);
 
-		const updateCall = calls.find((c) => c.strings.join("").includes("update attachment_fingerprints"));
+		const updateCall = calls.find((call) => call.strings.join("").includes("update attachment_fingerprints"));
 		expect(updateCall?.strings.join("")).toContain("flagged_at");
 		expect(updateCall?.strings.join("")).toContain("flagged_by");
 	});
@@ -502,7 +497,7 @@ describe("flagFingerprint", () => {
 
 		expect(result?.status).toBe(FingerprintStatus.Normal);
 
-		const updateCall = calls.find((c) => c.strings.join("").includes("update attachment_fingerprints"));
+		const updateCall = calls.find((call) => call.strings.join("").includes("update attachment_fingerprints"));
 		expect(updateCall?.strings.join("")).toContain("unflagged_at");
 		expect(updateCall?.strings.join("")).toContain("unflagged_by");
 	});
@@ -552,7 +547,7 @@ describe("flagFingerprint", () => {
 			flaggedBy: "admin123",
 		});
 
-		const updateCall = calls.find((c) => c.strings.join("").includes("update attachment_fingerprints"));
+		const updateCall = calls.find((call) => call.strings.join("").includes("update attachment_fingerprints"));
 		expect(updateCall?.strings.join("")).toContain("flagged_at");
 	});
 
@@ -578,7 +573,7 @@ describe("flagFingerprint", () => {
 			// notes not provided
 		});
 
-		const updateCall = calls.find((c) => c.strings.join("").includes("update attachment_fingerprints"));
+		const updateCall = calls.find((call) => call.strings.join("").includes("update attachment_fingerprints"));
 		expect(updateCall?.strings.join("")).toContain("coalesce");
 	});
 
@@ -609,26 +604,25 @@ describe("getFingerprintStats", () => {
 	});
 
 	it("returns all aggregate counts", async () => {
-		const countResult = {
-			total: "100",
-			flagged: "10",
-			trusted: "5",
-			total_occurrences: "500",
-			total_actions: "50",
-			seen_24h: "20",
-			seen_7d: "80",
-			suspicious: "15",
+		// New CTE query returns all data in a single response with json_agg for arrays
+		const cteResult = {
+			total: 100,
+			flagged: 10,
+			trusted: 5,
+			total_occurrences: 500,
+			total_actions: 50,
+			seen_24h: 20,
+			seen_7d: 80,
+			suspicious: 15,
+			unique_users: 75,
+			top_by_occurrence: [mockRawFingerprint],
+			top_by_guild_spread: [mockRawFingerprint],
+			top_by_user_spread: [mockRawFingerprint],
+			recently_flagged: [mockRawFingerprintFlagged],
+			recently_unflagged: [],
 		};
 
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [countResult]],
-			["count(distinct user_id)", [{ count: "75" }]],
-			["order by occurrence_count desc", [mockRawFingerprint]],
-			["order by guild_count desc", [mockRawFingerprint]],
-			["order by user_count desc", [mockRawFingerprint]],
-			["order by flagged_at desc", [mockRawFingerprintFlagged]],
-			["order by unflagged_at desc", []],
-		]);
+		const responses = new Map<string, unknown[]>([["with", [cteResult]]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -651,26 +645,25 @@ describe("getFingerprintStats", () => {
 			createMockRawFingerprint({ hash: "hash2", occurrence_count: 90 }),
 		];
 
-		const countResult = {
-			total: "2",
-			flagged: "0",
-			trusted: "0",
-			total_occurrences: "190",
-			total_actions: "0",
-			seen_24h: "2",
-			seen_7d: "2",
-			suspicious: "0",
+		// New CTE query returns all data in a single response
+		const cteResult = {
+			total: 2,
+			flagged: 0,
+			trusted: 0,
+			total_occurrences: 190,
+			total_actions: 0,
+			seen_24h: 2,
+			seen_7d: 2,
+			suspicious: 0,
+			unique_users: 10,
+			top_by_occurrence: fingerprints,
+			top_by_guild_spread: fingerprints,
+			top_by_user_spread: fingerprints,
+			recently_flagged: [],
+			recently_unflagged: [],
 		};
 
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [countResult]],
-			["count(distinct user_id)", [{ count: "10" }]],
-			["order by occurrence_count desc", fingerprints],
-			["order by guild_count desc", fingerprints],
-			["order by user_count desc", fingerprints],
-			["order by flagged_at desc", []],
-			["order by unflagged_at desc", []],
-		]);
+		const responses = new Map<string, unknown[]>([["with", [cteResult]]]);
 		const { mock } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -683,22 +676,24 @@ describe("getFingerprintStats", () => {
 
 	it("calculates suspicious count with correct thresholds", async () => {
 		// Suspicious = Normal status AND (guild_count >= 5 OR occurrence_count >= 10)
-		const countResult = {
-			total: "50",
-			flagged: "5",
-			trusted: "3",
-			total_occurrences: "200",
-			total_actions: "10",
-			seen_24h: "10",
-			seen_7d: "40",
-			suspicious: "12",
+		const cteResult = {
+			total: 50,
+			flagged: 5,
+			trusted: 3,
+			total_occurrences: 200,
+			total_actions: 10,
+			seen_24h: 10,
+			seen_7d: 40,
+			suspicious: 12,
+			unique_users: 30,
+			top_by_occurrence: [],
+			top_by_guild_spread: [],
+			top_by_user_spread: [],
+			recently_flagged: [],
+			recently_unflagged: [],
 		};
 
-		const responses = new Map<string, unknown[]>([
-			["count(*)", [countResult]],
-			["count(distinct user_id)", [{ count: "30" }]],
-			["order by", []],
-		]);
+		const responses = new Map<string, unknown[]>([["with", [cteResult]]]);
 		const { mock, calls } = createAdvancedSqlMock(createQueryHandler(responses));
 		mockContainerGet.mockReturnValue(mock);
 
@@ -707,7 +702,7 @@ describe("getFingerprintStats", () => {
 		expect(result.suspiciousCount).toBe(12);
 
 		// Verify the thresholds are used in the query
-		const countQuery = calls.find((c) => c.strings.join("").includes("suspicious"));
+		const countQuery = calls.find((call) => call.strings.join("").includes("suspicious"));
 		expect(countQuery?.values).toContain(FINGERPRINT_SUSPICIOUS_GUILD_COUNT);
 		expect(countQuery?.values).toContain(FINGERPRINT_SUSPICIOUS_OCCURRENCE_COUNT);
 	});
@@ -726,7 +721,7 @@ describe("incrementActionCount", () => {
 
 		await incrementActionCount("testhash123");
 
-		const updateCall = calls.find((c) => c.strings.join("").includes("action_count"));
+		const updateCall = calls.find((call) => call.strings.join("").includes("action_count"));
 		expect(updateCall).toBeDefined();
 		expect(updateCall?.strings.join("")).toContain("action_count + 1");
 	});
@@ -741,7 +736,7 @@ describe("incrementActionCount", () => {
 
 		await incrementActionCount("testhash123", 42);
 
-		const occurrenceUpdate = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_occurrences"));
+		const occurrenceUpdate = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_occurrences"));
 		expect(occurrenceUpdate).toBeDefined();
 		expect(occurrenceUpdate?.values).toContain(42);
 	});
@@ -753,7 +748,7 @@ describe("incrementActionCount", () => {
 
 		await incrementActionCount("testhash123");
 
-		const occurrenceUpdate = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_occurrences"));
+		const occurrenceUpdate = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_occurrences"));
 		expect(occurrenceUpdate).toBeUndefined();
 	});
 
@@ -769,7 +764,7 @@ describe("incrementActionCount", () => {
 		await expect(incrementActionCount("testhash123", 42, "123456789012345678" as Snowflake)).resolves.toBeUndefined();
 
 		// The occurrence update query should still be called
-		const occurrenceUpdate = calls.find((c) => c.strings.join("").includes("attachment_fingerprint_occurrences"));
+		const occurrenceUpdate = calls.find((call) => call.strings.join("").includes("attachment_fingerprint_occurrences"));
 		expect(occurrenceUpdate).toBeDefined();
 	});
 
@@ -802,7 +797,7 @@ describe("pruneOccurrences", () => {
 
 		await pruneOccurrences();
 
-		const deleteCall = calls.find((c) => c.strings.join("").includes("delete from"));
+		const deleteCall = calls.find((call) => call.strings.join("").includes("delete from"));
 		expect(deleteCall).toBeDefined();
 		// The retention days value is injected via make_interval(), which is safe parameterization
 		expect(deleteCall?.strings.join("")).toContain("attachment_fingerprint_occurrences");
